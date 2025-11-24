@@ -1,5 +1,6 @@
 package maxitoson.tavernkeeper.items;
 
+import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.network.NetworkHandler;
@@ -17,6 +18,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class MarkingCane extends Item {
+    private static final Logger LOGGER = LogUtils.getLogger();
     
     // Store selections per player (UUID -> AreaSelection)
     private static final Map<UUID, AreaSelection> PLAYER_SELECTIONS = new HashMap<>();
@@ -45,7 +48,7 @@ public class MarkingCane extends Item {
         tooltip.add(Component.literal("§7  (Click area twice to delete)").withStyle(ChatFormatting.GRAY));
     }
     
-    // Right-click on block - sets first position, then second position and auto-saves
+    // Right-click on block - sets first position, then second position and auto-saves, OR designates tavern sign
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
@@ -54,12 +57,23 @@ public class MarkingCane extends Item {
         
         if (player == null) return InteractionResult.PASS;
         
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        
+        LOGGER.info("MarkingCane.useOn called - pos: {}, block: {}, isClientSide: {}", 
+            pos, state.getBlock().getClass().getSimpleName(), level.isClientSide);
+        
+        // NOTE: Sign clicks are intercepted by event handler (HIGH priority) to prevent editor
+        // The event handler calls handleSignClick() directly
+        // So signs will never reach this code path
+        
+        // Normal area selection flow - server side only
         if (!level.isClientSide) {
             UUID playerId = player.getUUID();
             
             // Right-click cancels pending deletion
             PENDING_DELETIONS.remove(playerId);
             
+            // Normal flow: area selection
             AreaSelection selection = PLAYER_SELECTIONS.computeIfAbsent(playerId, k -> new AreaSelection());
             
             // If first position not set, set it
@@ -92,6 +106,19 @@ public class MarkingCane extends Item {
         }
         
         return InteractionResult.SUCCESS;
+    }
+    
+    /**
+     * Handle right-click on a sign with marking cane to designate it as tavern sign
+     * Simply delegates to Tavern which owns all sign management
+     */
+    public static void handleSignClick(net.minecraft.server.level.ServerLevel serverLevel,
+                                       BlockPos pos, Player player) {
+        LOGGER.info("MarkingCane: Designating sign at {} as tavern sign", pos);
+        
+        // Delegate to Tavern - it owns all sign management
+        Tavern tavern = Tavern.get(serverLevel);
+        tavern.setTavernSign(pos, player);
     }
     
     /**

@@ -6,17 +6,31 @@ A Minecraft mod that lets you run your own tavern! Mark areas, serve customers, 
 
 Run a fully functional tavern in Minecraft:
 - **Mark areas** with a special tool (Dining, Sleeping, Service)
-- **Customers spawn automatically** and request food
+- **Customers spawn** and come to your tawern to request food
 - **Serve them** and get paid
 - **Watch them eat** at your tables before leaving
 
-## Quick Start
+## Mod content
 
-1. Get the **Marking Cane** from creative inventory
-2. Mark a **Service Area** (place lectern)
-3. Mark a **Dining Area** (place tables and chairs - the most basic ones are stairs and upside-dwon stairs)
-4. Keep food in your inventory
-5. Customers arrive, you serve them (right click with food), profit! 💰
+### Setting Up Your Tavern
+1. **Select Mode**: Shift + Scroll → "Mode: §eDining Area"
+2. **Mark Area**: Right-click → Right-click
+3. **Auto-saved**: "Saved Dining Area #3 (250 blocks)"
+4. **Place Furniture**:
+   - Dining: Place upside-down stairs (tables) + stairs facing tables (chairs)
+   - Service: Place lecterns (queue points) - barrels are optional decoration
+5. **Set Tavern Sign**: Hold cane → Right-click any sign → Designates tavern sign
+6. **Toggle Open/Closed**: Right-click tavern sign (empty hand) → Controls customer spawning
+7. **See Areas**: Hold cane → All areas visible (colored boxes)
+
+### Running Your Tavern
+1. **Make sure tavern is OPEN** - right-click tavern sign to toggle
+2. **Customers spawn automatically** (~30 seconds intervals when OPEN)
+3. **Customer walks to lectern** and shows food request (item above head)
+4. **You serve them** - right-click customer while holding the requested food
+5. **Customer pays** (gives you emerald) and walks to a chair
+6. **Customer eats** then leaves and despawns
+7. **Toggle CLOSED** when you need a break - no new customers will spawn
 
 ## Documentation
 

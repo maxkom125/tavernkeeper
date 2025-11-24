@@ -1,5 +1,6 @@
 package maxitoson.tavernkeeper.tavern;
 
+import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.tavern.managers.CustomerManager;
 import maxitoson.tavernkeeper.tavern.managers.DiningManager;
@@ -15,6 +16,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.AABB;
+import org.slf4j.Logger;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -28,6 +30,7 @@ import java.util.stream.Stream;
  * Implements TavernContext to provide controlled access to managers
  */
 public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.managers.TavernContext {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String DATA_NAME = "tavernkeeper_tavern";
     
     private final DiningManager diningManager;
@@ -35,6 +38,10 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     private final ServiceManager serviceManager;
     private final CustomerManager customerManager;
     private ServerLevel level;
+    
+    // Tavern open/closed state
+    private boolean manuallyOpen = true;  // Default to open
+    private BlockPos tavernSignPos = null;  // Position of the tavern sign
     
     public Tavern() {
         this.diningManager = new DiningManager(this);
@@ -222,11 +229,135 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     // ========== Tavern State Queries (for CustomerManager) ==========
 
     /**
-     *  Check if tavern is open for business (has service areas with lecterns)
+     *  Check if tavern is open for business (has service areas with lecterns AND manually open)
      */
     public boolean isOpen() {
-        return serviceManager.getTotalLecternCount() > 0
+        return manuallyOpen 
+            && serviceManager.getTotalLecternCount() > 0
             && !getAllSpaces().isEmpty();
+    }
+    
+    /**
+     * Set tavern sign position and update its text
+     * Destroys the old tavern sign if one exists
+     * 
+     * @param pos The position of the new tavern sign
+     * @param player The player setting the sign (for feedback), can be null
+     */
+    public void setTavernSign(BlockPos pos, net.minecraft.world.entity.player.Player player) {
+        // Check if already the tavern sign
+        if (tavernSignPos != null && tavernSignPos.equals(pos)) {
+            if (player != null) {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "§6[Tavern Keeper] §rThis is already your tavern sign!"
+                ));
+            }
+            return;
+        }
+        
+        // Destroy old sign if it exists at a different position
+        if (tavernSignPos != null && level != null) {
+            net.minecraft.world.level.block.state.BlockState oldState = level.getBlockState(tavernSignPos);
+            if (oldState.getBlock() instanceof net.minecraft.world.level.block.SignBlock) {
+                level.destroyBlock(tavernSignPos, true); // true = drop items
+                LOGGER.info("Destroyed old tavern sign at {}", tavernSignPos);
+            }
+        }
+        
+        // Set new sign position and update its text
+        this.tavernSignPos = pos;
+        updateSignText();
+        setDirty();
+        
+        // Provide feedback to player
+        if (player != null) {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "§6[Tavern Keeper] §rThis sign is now your tavern sign! Right-click to toggle open/closed."
+            ));
+            player.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
+        }
+        
+        LOGGER.info("Set tavern sign at {}", pos);
+    }
+    
+    /**
+     * Toggle tavern open/closed state
+     * Called when player clicks on the tavern sign
+     * 
+     * @param player The player toggling the state (for feedback)
+     */
+    public void toggleOpenClosed(net.minecraft.world.entity.player.Player player) {
+        this.manuallyOpen = !this.manuallyOpen;
+        updateSignText();
+        setDirty();
+        
+        // Provide feedback to player
+        String status = isOpen() ? "§aOPEN" : "§cCLOSED";
+        player.displayClientMessage(
+            net.minecraft.network.chat.Component.literal("§6[Tavern Keeper] §rTavern is now " + status),
+            true
+        );
+        player.playSound(net.minecraft.sounds.SoundEvents.WOODEN_DOOR_CLOSE, 1.0F, 1.0F);
+    }
+    
+    /**
+     * Update the sign text to show current state
+     */
+    private void updateSignText() {
+        if (tavernSignPos == null || level == null) {
+            return;
+        }
+        
+        // Get the sign block entity
+        var blockEntity = level.getBlockEntity(tavernSignPos);
+        if (blockEntity instanceof net.minecraft.world.level.block.entity.SignBlockEntity signEntity) {
+            // Update the sign text
+            var frontText = signEntity.getFrontText();
+            frontText = frontText.setMessage(0, net.minecraft.network.chat.Component.literal(""));
+            frontText = frontText.setMessage(1, net.minecraft.network.chat.Component.literal(
+                manuallyOpen ? "§a§lOPEN" : "§c§lCLOSED"
+            ));
+            frontText = frontText.setMessage(2, net.minecraft.network.chat.Component.literal(""));
+            frontText = frontText.setMessage(3, net.minecraft.network.chat.Component.literal(""));
+            
+            signEntity.setText(frontText, true);
+            signEntity.setChanged();
+            
+            // Sync to clients
+            level.sendBlockUpdated(tavernSignPos, 
+                level.getBlockState(tavernSignPos), 
+                level.getBlockState(tavernSignPos), 
+                3);
+        }
+    }
+    
+    /**
+     * Get the current tavern sign position
+     */
+    public BlockPos getTavernSignPos() {
+        return tavernSignPos;
+    }
+    
+    /**
+     * Check if a position is the tavern sign
+     */
+    public boolean isTavernSign(BlockPos pos) {
+        return tavernSignPos != null && tavernSignPos.equals(pos);
+    }
+    
+    /**
+     * Clear the tavern sign reference (e.g., when sign is broken)
+     */
+    public void clearTavernSign() {
+        this.tavernSignPos = null;
+        setDirty();
+    }
+    
+    /**
+     * Get the manually-set open state (used for messaging)
+     */
+    public boolean isManuallyOpen() {
+        return manuallyOpen;
     }
     
     /**
@@ -319,6 +450,15 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         sleepingManager.save(tag, registries);
         serviceManager.save(tag, registries);
         customerManager.save(tag, registries);
+        
+        // Save tavern open/closed state
+        tag.putBoolean("manuallyOpen", manuallyOpen);
+        
+        // Save tavern sign position
+        if (tavernSignPos != null) {
+            tag.putLong("tavernSignPos", tavernSignPos.asLong());
+        }
+        
         return tag;
     }
 
@@ -340,6 +480,17 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
             sleepingManager.load(loadedData, level, registries);
             serviceManager.load(loadedData, level, registries);
             customerManager.load(loadedData, level, registries);
+            
+            // Load tavern open/closed state
+            if (loadedData.contains("manuallyOpen")) {
+                manuallyOpen = loadedData.getBoolean("manuallyOpen");
+            }
+            
+            // Load tavern sign position
+            if (loadedData.contains("tavernSignPos")) {
+                tavernSignPos = BlockPos.of(loadedData.getLong("tavernSignPos"));
+            }
+            
             loadedData = null;  // Clear after loading
         }
     }

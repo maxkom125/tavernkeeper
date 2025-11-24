@@ -79,6 +79,15 @@ tavernkeeper/
   7. Sit and eat food
   8. Leave and despawn
 
+### 9. **Tavern Open/Closed State** 🚪
+- **Tavern Sign**: Designate any sign as your tavern sign
+  - Hold Marking Cane + Right-click sign → Sets as tavern sign
+  - Right-click tavern sign (empty hand) → Toggle OPEN/CLOSED
+  - Sign automatically shows "OPEN" (green) or "CLOSED" (red)
+- **Business Control**: Controls customer spawning
+  - OPEN: Customers spawn normally (~30 seconds intervals)
+  - CLOSED: No new customers spawn
+
 ---
 
 ## 📖 How to Use
@@ -102,24 +111,6 @@ tavernkeeper/
 **Step 4: Delete Areas (if needed)**
 - **Left-click** area → turns red
 - **Left-click again** → deleted (or right-click to cancel)
-
-### Setting Up Your Tavern
-1. **Select Mode**: Shift + Scroll → "Mode: §eDining Area"
-2. **Mark Area**: Right-click → Right-click
-3. **Auto-saved**: "Saved Dining Area #3 (250 blocks)"
-4. **Place Furniture**:
-   - Dining: Place upside-down stairs (tables) + stairs facing tables (chairs)
-   - Service: Place lecterns (queue points) - barrels are optional decoration
-5. **See Areas**: Hold cane → All areas visible (colored boxes)
-6. **Get food**: Have food items in your inventory (carrots, bread, etc.)
-
-### Running Your Tavern
-1. **Customers spawn automatically** (~30 seconds intervals)
-2. **Customer walks to lectern** and shows food request (item above head)
-3. **You serve them** - right-click customer while holding the requested food
-4. **Customer pays** (gives you emerald) and walks to a chair
-5. **Customer eats** then leaves and despawns
-6. **Repeat!** New customers keep coming
 
 ### Example Workflow
 

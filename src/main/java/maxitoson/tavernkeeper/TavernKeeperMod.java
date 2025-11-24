@@ -197,6 +197,50 @@ public class TavernKeeperMod
         }
     }
     
+    // Handle right-click on block - HIGH PRIORITY to intercept sign interactions before editor opens
+    // Cancel the event if the player is holding a marking cane and clicking on a sign
+    // If the player is clicking on a tavern sign, toggle the tavern sign
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGH)
+    public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event)
+    {
+        Player player = event.getEntity();
+        ItemStack heldItem = player.getItemInHand(event.getHand());
+        net.minecraft.core.BlockPos pos = event.getPos();
+        net.minecraft.world.level.Level level = event.getLevel();
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        
+        // Client-side: prevent sign editor from opening if holding marking cane
+        if (level.isClientSide) {
+            if (state.getBlock() instanceof net.minecraft.world.level.block.SignBlock 
+                && heldItem.getItem() instanceof MarkingCane) {
+                event.setCanceled(true);
+                event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+            }
+            return;
+        }
+        
+        // Server-side routing logic
+        net.minecraft.server.level.ServerLevel serverLevel = (net.minecraft.server.level.ServerLevel) level;
+        Tavern tavern = Tavern.get(serverLevel);
+        
+        // Route 1: Holding marking cane + clicking sign → delegate to MarkingCane
+        if (heldItem.getItem() instanceof MarkingCane 
+            && state.getBlock() instanceof net.minecraft.world.level.block.SignBlock) {
+            MarkingCane.handleSignClick(serverLevel, pos, player);
+            event.setCanceled(true);
+            event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+            return;
+        }
+        
+        // Route 2: Clicking on tavern sign (without marking cane) → delegate to Tavern
+        if (tavern.isTavernSign(pos)) {
+            tavern.toggleOpenClosed(player);
+            event.setCanceled(true);
+            event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
+            return;
+        }
+    }
+    
     // Handle left-click on block with Marking Cane (clears selection or deletes area)
     @SubscribeEvent
     public void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event)
@@ -225,6 +269,13 @@ public class TavernKeeperMod
         if (event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
             net.minecraft.core.BlockPos pos = event.getPos();
             Tavern tavern = Tavern.get(serverLevel);
+            
+            // If placing a block at the tavern sign position, clear it (sign was replaced)
+            if (tavern.isTavernSign(pos) && !(event.getState().getBlock() instanceof net.minecraft.world.level.block.SignBlock)) {
+                LOGGER.info("Block placed at tavern sign position {} - clearing tavern sign", pos);
+                tavern.clearTavernSign();
+            }
+            
             tavern.getSpacesAt(pos).forEach(space -> space.onBlockUpdated(pos, event.getState()));
         }
     }
@@ -235,6 +286,13 @@ public class TavernKeeperMod
         if (event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
             net.minecraft.core.BlockPos pos = event.getPos();
             Tavern tavern = Tavern.get(serverLevel);
+            
+            // If breaking the tavern sign block, clear the reference
+            if (tavern.isTavernSign(pos)) {
+                LOGGER.info("Tavern sign at {} was broken - clearing tavern sign", pos);
+                tavern.clearTavernSign();
+            }
+            
             // Pass the OLD state to handle multi-block removal correctly
             tavern.getSpacesAt(pos).forEach(space -> space.onBlockBroken(pos, event.getState()));
         }
@@ -307,6 +365,7 @@ public class TavernKeeperMod
             }
         }
     }
+    
 
 }
 

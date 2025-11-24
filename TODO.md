@@ -1,6 +1,5 @@
 ### High Priority (Next Focus)
-- [ ] Git!
-- [ ] Add taver open/close mechanic
+- [x] Add taver open/close mechanic
 - [ ] **Economy System**
   - [ ] Create internal money
   - [ ] Track earned money
