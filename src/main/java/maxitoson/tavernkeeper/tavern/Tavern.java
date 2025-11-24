@@ -230,6 +230,7 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
 
     /**
      *  Check if tavern is open for business (has service areas with lecterns AND manually open)
+     * Note: Please change toggleOpenClosed if you change this method
      */
     public boolean isOpen() {
         return manuallyOpen 
@@ -291,12 +292,40 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         updateSignText();
         setDirty();
         
-        // Provide feedback to player
-        String status = isOpen() ? "§aOPEN" : "§cCLOSED";
-        player.displayClientMessage(
-            net.minecraft.network.chat.Component.literal("§6[Tavern Keeper] §rTavern is now " + status),
-            true
-        );
+        // Provide feedback to player with detailed status
+        if (manuallyOpen) {
+            // Sign says OPEN, but check if tavern is actually ready for business
+            if (isOpen()) {
+                player.displayClientMessage(
+                    net.minecraft.network.chat.Component.literal("§6[Tavern Keeper] §rTavern is now §aOPEN"),
+                    true
+                );
+            } else {
+                // Sign is OPEN but missing requirements
+                StringBuilder message = new StringBuilder("§6[Tavern Keeper] §rSign is §aOPEN§r but tavern not ready: ");
+                java.util.List<String> issues = new java.util.ArrayList<>();
+                
+                if (getAllSpaces().isEmpty()) {
+                    issues.add("§cNo areas defined");
+                }
+                if (serviceManager.getTotalLecternCount() == 0) {
+                    issues.add("§cNo lecterns in service areas");
+                }
+                
+                message.append(String.join(", ", issues));
+                player.displayClientMessage(
+                    net.minecraft.network.chat.Component.literal(message.toString()),
+                    true
+                );
+            }
+        } else {
+            // Sign says CLOSED
+            player.displayClientMessage(
+                net.minecraft.network.chat.Component.literal("§6[Tavern Keeper] §rTavern is now §cCLOSED"),
+                true
+            );
+        }
+        
         player.playSound(net.minecraft.sounds.SoundEvents.WOODEN_DOOR_CLOSE, 1.0F, 1.0F);
     }
     
@@ -495,4 +524,3 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         }
     }
 }
-
