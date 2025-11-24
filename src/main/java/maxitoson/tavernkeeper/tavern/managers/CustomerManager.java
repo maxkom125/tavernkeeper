@@ -1,0 +1,364 @@
+package maxitoson.tavernkeeper.tavern.managers;
+
+import maxitoson.tavernkeeper.TavernKeeperMod;
+import maxitoson.tavernkeeper.entities.CustomerEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnPlacementType;
+import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Manages customer spawning, tracking, and lifecycle
+ * 
+ * Responsibilities:
+ * - Spawn customers at designated spawn points
+ * - Track active customers
+ * - Enforce customer limits
+ * - Manage spawn timing/rates
+ */
+public class CustomerManager {
+    private final TavernContext tavern;
+    private final List<UUID> activeCustomers = new ArrayList<>();
+    private final RandomSource random = RandomSource.create();
+    
+    private int spawnCooldownTicks = 0; // Countdown until next spawn attempt
+    private Optional<BlockPos> waveSpawnPos = Optional.empty(); // Cached spawn position
+    
+    // Tavern capacity settings (will be upgradeable in the future)
+    private int maxCustomers = 10; // Starting capacity, can be upgraded
+    private int spawnIntervalMean = 600; // Mean spawn rate (30 seconds)
+    private int spawnIntervalStd = 120; // Standard deviation (±6 seconds)
+    
+    // Spawn attempt constants (from Raid.java)
+    private static final int NUM_SPAWN_ATTEMPTS = 20; // Total attempts to find valid position
+    private static final int SPAWN_SEARCH_RADIUS = 32; // Blocks from center to search
+    
+    public CustomerManager(TavernContext tavern) {
+        this.tavern = tavern;
+    }
+    
+    /**
+     * Called every server tick to handle customer lifecycle
+     * Adapted from Raid.tick() (Raid.java lines 277-430)
+     */
+    public void tick(ServerLevel level) {
+        if (level == null) return;
+        
+        // Handle spawn cooldown and position searching (from Raid.java lines 315-347)
+        if (spawnCooldownTicks > 0) {
+            // Check if we need to find/update spawn position (every 5 ticks)
+            boolean needsNewPos = !waveSpawnPos.isPresent() && spawnCooldownTicks % 5 == 0;
+            if (waveSpawnPos.isPresent() && !level.isPositionEntityTicking(waveSpawnPos.get())) {
+                needsNewPos = true; // Position no longer ticking, find new one
+            }
+            
+            if (needsNewPos) {
+                waveSpawnPos = getValidSpawnPos(level);
+            }
+            
+            spawnCooldownTicks--;
+        }
+        
+        // Try to spawn if cooldown expired and we can spawn more (from Raid.java lines 366-383)
+        if (shouldSpawnCustomer(level)) {
+            BlockPos spawnPos = waveSpawnPos.isPresent() ? waveSpawnPos.get() : findRandomSpawnPos(level, NUM_SPAWN_ATTEMPTS);
+            if (spawnPos != null) {
+                spawnCustomer(level, spawnPos);
+            } else {
+                // Failed to find position, try again next interval
+                resetSpawnCooldown();
+            }
+        }
+    }
+    
+    /**
+     * Check if we should attempt to spawn a customer
+     * Adapted from Raid.shouldSpawnGroup() (line 642)
+     */
+    private boolean shouldSpawnCustomer(ServerLevel level) {
+        return spawnCooldownTicks == 0 
+            && countActiveCustomers(level) < maxCustomers
+            && isTavernOpen();
+    }
+    
+    /**
+     * Get a valid spawn position (with multiple attempts)
+     * Adapted from Raid.getValidSpawnPos() (lines 442-451)
+     */
+    private Optional<BlockPos> getValidSpawnPos(ServerLevel level) {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            BlockPos pos = findRandomSpawnPos(level, 1);
+            if (pos != null) {
+                return Optional.of(pos);
+            }
+        }
+        return Optional.empty();
+    }
+    
+    /**
+     * Find a random spawn position near the tavern center (random lectern)
+     * Adapted directly from Raid.findRandomSpawnPos() (lines 686-706)
+     * 
+     * This is the CORE Raid spawn logic with exact same validation checks
+     */
+    private BlockPos findRandomSpawnPos(ServerLevel level, int maxTry) {
+        // Get center point (random lectern in service area)
+        BlockPos center = getTavernCenter();
+        if (center == null) {
+            return null; // No lecterns = can't spawn
+        }
+        
+        // Get spawn placement type for validation (from Raid.java line 689)
+        EntityType<?> customerType = TavernKeeperMod.CUSTOMER.get();
+        SpawnPlacementType placementType = SpawnPlacements.getPlacementType(customerType);
+        
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+        
+        // Try maxTry times to find valid position (from Raid.java lines 691-703)
+        for (int attempt = 0; attempt < maxTry; attempt++) {
+            // Random angle and distance from center (EXACT Raid logic from lines 692-694)
+            float angle = level.random.nextFloat() * ((float)Math.PI * 2F); // 2π
+            int x = center.getX() + Mth.floor(Mth.cos(angle) * SPAWN_SEARCH_RADIUS) + level.random.nextInt(5);
+            int z = center.getZ() + Mth.floor(Mth.sin(angle) * SPAWN_SEARCH_RADIUS) + level.random.nextInt(5);
+            int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z); // Get surface height (line 695)
+            
+            mutablePos.set(x, y, z);
+            
+            // Validate spawn position (EXACT checks from Raid.java lines 697-700)
+            if (level.isLoaded(mutablePos) // Replaced deprecated hasChunksAt
+                && level.isPositionEntityTicking(mutablePos)
+                && (placementType.isSpawnPositionOk(level, mutablePos, customerType)
+                    || level.getBlockState(mutablePos.below()).is(Blocks.SNOW) 
+                        && level.getBlockState(mutablePos).isAir())) {
+                return mutablePos.immutable();
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get the tavern's center point (random lectern position)
+     * This replaces Raid's village center logic
+     */
+    private BlockPos getTavernCenter() {
+        return tavern.getTavernCenter();
+    }
+    
+    /**
+     * Actually spawn a customer entity at the given position
+     * Adapted from Raid.joinRaid() (lines 604-620)
+     */
+    private void spawnCustomer(ServerLevel level, BlockPos pos) {
+        CustomerEntity customer = TavernKeeperMod.CUSTOMER.get().create(level);
+        if (customer == null) {
+            resetSpawnCooldown();
+            return;
+        }
+        
+        // Position entity (from Raid.java line 612)
+        customer.setPos((double)pos.getX() + 0.5, (double)pos.getY() + 1.0, (double)pos.getZ() + 0.5);
+        
+        // Finalize spawn (from Raid.java line 613)
+        customer.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.EVENT, null);
+        
+        // Set on ground (from Raid.java line 615)
+        customer.setOnGround(true);
+        
+        // Add to world (from Raid.java line 616)
+        level.addFreshEntityWithPassengers(customer);
+        
+        // Track customer
+        registerCustomer(customer.getUUID());
+        
+        // Reset for next spawn
+        waveSpawnPos = Optional.empty();
+        resetSpawnCooldown();
+        
+        // Notify players
+        level.getServer().getPlayerList().getPlayers().forEach(player -> {
+            player.sendSystemMessage(
+                net.minecraft.network.chat.Component.literal(
+                    "§6[Tavern] §rA customer has arrived! (" + countActiveCustomers(level) + "/" + maxCustomers + ")"
+                )
+            );
+        });
+    }
+    
+    /**
+     * Reset spawn cooldown with random interval (mean ± std)
+     */
+    private void resetSpawnCooldown() {
+        // Gaussian distribution: mean ± std
+        int variance = (int)(random.nextGaussian() * spawnIntervalStd);
+        spawnCooldownTicks = Math.max(10, spawnIntervalMean + variance);
+    }
+    
+    /**
+     * Count actual customer entities in the world
+     * This handles chunk reloading gracefully - if chunks reload with customers,
+     * we'll detect them and not over-spawn
+     */
+    private int countActiveCustomers(ServerLevel level) {
+        try {
+            // Query all customer entities in the world
+            return level.getEntities(
+                maxitoson.tavernkeeper.TavernKeeperMod.CUSTOMER.get(),
+                entity -> true // Count all customers
+            ).size();
+        } catch (Exception e) {
+            // Fallback to tracked list if entity type not available
+            return activeCustomers.size();
+        }
+    }
+    
+    /**
+     * Check if tavern is open (has at least one service area with lecterns)
+     * This replaces Raid's village check
+     */
+    public boolean isTavernOpen() {
+        return tavern.isOpen();
+    }
+    
+    /**
+     * Get count of active customers
+     */
+    public int getActiveCustomerCount() {
+        return activeCustomers.size();
+    }
+    
+    /**
+     * Check if we can spawn more customers
+     */
+    public boolean canSpawnCustomer() {
+        return isTavernOpen() && activeCustomers.size() < maxCustomers;
+    }
+    
+    // ========== Capacity Management (for future upgrades) ==========
+    
+    /**
+     * Get current maximum customer capacity
+     * TODO: Calculate based on tavern level, number of chairs, etc.
+     */
+    public int getMaxCustomers() {
+        return maxCustomers;
+    }
+    
+    /**
+     * Set maximum customer capacity (for upgrades)
+     */
+    public void setMaxCustomers(int max) {
+        this.maxCustomers = Math.max(1, max); // Minimum 1
+    }
+    
+    /**
+     * Get current mean spawn interval in ticks
+     */
+    public int getSpawnIntervalMean() {
+        return spawnIntervalMean;
+    }
+    
+    /**
+     * Set mean spawn interval (for upgrades that speed up spawning)
+     */
+    public void setSpawnIntervalMean(int interval) {
+        this.spawnIntervalMean = interval;
+    }
+    
+    /**
+     * Get spawn interval standard deviation
+     */
+    public int getSpawnIntervalStd() {
+        return spawnIntervalStd;
+    }
+    
+    /**
+     * Set spawn interval standard deviation
+     */
+    public void setSpawnIntervalStd(int std) {
+        this.spawnIntervalStd = Math.max(0, std);
+    }
+    
+    /**
+     * Track a newly spawned customer
+     */
+    public void registerCustomer(UUID customerId) {
+        if (!activeCustomers.contains(customerId)) {
+            activeCustomers.add(customerId);
+        }
+    }
+    
+    /**
+     * Remove customer from tracking (when despawned)
+     */
+    public void unregisterCustomer(UUID customerId) {
+        activeCustomers.remove(customerId);
+    }
+    
+    // ========== Persistence ==========
+    
+    /**
+     * Save customer manager configuration (NOT individual customers - they persist themselves)
+     * 
+     * Design decision: Only save settings, not runtime state
+     * - Customer entities persist through Minecraft's own entity system
+     * - countActiveCustomers() queries world directly on load
+     * - Spawn position/cooldown can be recalculated fresh
+     * - This prevents stale UUID tracking and simplifies persistence
+     */
+    public void save(CompoundTag tag, HolderLookup.Provider registries) {
+        CompoundTag customerTag = new CompoundTag();
+        
+        // Only save configuration (upgradeable settings)
+        customerTag.putInt("MaxCustomers", maxCustomers);
+        customerTag.putInt("SpawnIntervalMean", spawnIntervalMean);
+        customerTag.putInt("SpawnIntervalStd", spawnIntervalStd);
+        
+        tag.put("CustomerManager", customerTag);
+    }
+    
+    /**
+     * Load customer manager configuration
+     * Runtime state (cooldown, spawn position, customer list) is reset and recalculated
+     */
+    public void load(CompoundTag tag, ServerLevel level, HolderLookup.Provider registries) {
+        if (!tag.contains("CustomerManager")) {
+            return;
+        }
+        
+        CompoundTag customerTag = tag.getCompound("CustomerManager");
+        
+        // Load configuration
+        if (customerTag.contains("MaxCustomers")) {
+            maxCustomers = customerTag.getInt("MaxCustomers");
+        }
+        if (customerTag.contains("SpawnIntervalMean")) {
+            spawnIntervalMean = customerTag.getInt("SpawnIntervalMean");
+        }
+        if (customerTag.contains("SpawnIntervalStd")) {
+            spawnIntervalStd = customerTag.getInt("SpawnIntervalStd");
+        }
+        
+        // Runtime state is intentionally reset:
+        // - activeCustomers list cleared (will rebuild from world query)
+        // - spawnCooldownTicks = 0 (spawn fresh after load)
+        // - waveSpawnPos = empty (find new position)
+        activeCustomers.clear();
+        spawnCooldownTicks = 0;
+        waveSpawnPos = java.util.Optional.empty();
+    }
+}
+

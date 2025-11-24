@@ -1,0 +1,47 @@
+# Gradle
+.gradle/
+build/
+out/
+classes/
+
+# Eclipse
+eclipse/
+*.launch
+.settings/
+.metadata/
+.classpath
+.project
+bin/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Visual Studio Code
+.vscode/
+.settings/
+
+# Cursor IDE
+.cursor/
+
+# Mac
+.DS_Store
+
+# Minecraft client/server files
+run/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Other
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
