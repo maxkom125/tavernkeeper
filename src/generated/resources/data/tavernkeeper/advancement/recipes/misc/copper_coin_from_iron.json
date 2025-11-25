@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_iron_coin": {
+      "conditions": {
+        "items": [
+          {
+            "items": "tavernkeeper:iron_coin"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "tavernkeeper:copper_coin_from_iron"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_iron_coin"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "tavernkeeper:copper_coin_from_iron"
+    ]
+  }
+}

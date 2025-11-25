@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.tavern.managers.CustomerManager;
 import maxitoson.tavernkeeper.tavern.managers.DiningManager;
+import maxitoson.tavernkeeper.tavern.managers.EconomyManager;
 import maxitoson.tavernkeeper.tavern.managers.ServiceManager;
 import maxitoson.tavernkeeper.tavern.managers.SleepingManager;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
@@ -37,6 +38,7 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     private final SleepingManager sleepingManager;
     private final ServiceManager serviceManager;
     private final CustomerManager customerManager;
+    private final EconomyManager economyManager;
     private ServerLevel level;
     
     // Tavern open/closed state
@@ -48,6 +50,7 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         this.sleepingManager = new SleepingManager(this);
         this.serviceManager = new ServiceManager(this);
         this.customerManager = new CustomerManager(this);
+        this.economyManager = new EconomyManager(this);
     }
     
     public void setLevel(ServerLevel level) {
@@ -224,6 +227,10 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     
     public CustomerManager getCustomerManager() {
         return customerManager;
+    }
+    
+    public EconomyManager getEconomyManager() {
+        return economyManager;
     }
     
     // ========== Tavern State Queries (for CustomerManager) ==========

@@ -1,6 +1,7 @@
 package maxitoson.tavernkeeper;
 
 import com.mojang.logging.LogUtils;
+import maxitoson.tavernkeeper.datagen.DataGenerators;
 import maxitoson.tavernkeeper.areas.AreaCommand;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.items.MarkingCane;
@@ -76,6 +77,14 @@ public class TavernKeeperMod
     // Creates the Marking Cane tool for area selection
     public static final DeferredItem<Item> MARKING_CANE = ITEMS.registerItem("marking_cane", MarkingCane::new, new Item.Properties().stacksTo(1));
     
+    // Currency System - Coins (in order: lowest to highest tier)
+    public static final DeferredItem<Item> COPPER_COIN = ITEMS.registerSimpleItem("copper_coin", new Item.Properties().stacksTo(64));
+    public static final DeferredItem<Item> IRON_COIN = ITEMS.registerSimpleItem("iron_coin", new Item.Properties().stacksTo(64));
+    public static final DeferredItem<Item> GOLD_COIN = ITEMS.registerSimpleItem("gold_coin", new Item.Properties().stacksTo(64));
+    public static final DeferredItem<Item> DIAMOND_COIN = ITEMS.registerSimpleItem("diamond_coin", new Item.Properties().stacksTo(64));
+    public static final DeferredItem<Item> NETHERITE_COIN = ITEMS.registerSimpleItem("netherite_coin", new Item.Properties().stacksTo(64));
+    public static final DeferredItem<Item> EMERALD_COIN = ITEMS.registerSimpleItem("emerald_coin", new Item.Properties().stacksTo(64)); // Special currency
+    
     // Register Customer Entity (uses Villager's properties)
     public static final DeferredHolder<EntityType<?>, EntityType<CustomerEntity>> CUSTOMER = ENTITY_TYPES.register("customer", 
         () -> EntityType.Builder.of(
@@ -97,6 +106,13 @@ public class TavernKeeperMod
             .icon(() -> MARKING_CANE.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
                 output.accept(MARKING_CANE.get()); // Area selection tool
+                // Coins in order (lowest to highest tier)
+                output.accept(COPPER_COIN.get());
+                output.accept(IRON_COIN.get());
+                output.accept(GOLD_COIN.get());
+                output.accept(DIAMOND_COIN.get());
+                output.accept(NETHERITE_COIN.get());
+                output.accept(EMERALD_COIN.get()); // Special currency
                 output.accept(CUSTOMER_SPAWN_EGG.get()); // Customer spawn egg for testing
                 output.accept(EXAMPLE_ITEM.get()); // Example item
             }).build());
@@ -126,6 +142,9 @@ public class TavernKeeperMod
         
         // Register network handlers
         modEventBus.addListener(NetworkHandler::register);
+
+        // Register data generators
+        modEventBus.addListener(DataGenerators::gatherData);
 
         // Register our mod's config so that NeoForge can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
@@ -325,7 +344,7 @@ public class TavernKeeperMod
                 return;
             }
             
-            maxitoson.tavernkeeper.entities.FoodRequest request = customer.getFoodRequest();
+            maxitoson.tavernkeeper.tavern.economy.FoodRequest request = customer.getFoodRequest();
             if (request == null) {
                 LOGGER.warn("Customer {} is waiting for service but has no food request!", customer.getId());
                 return;
@@ -336,21 +355,29 @@ public class TavernKeeperMod
                 // Remove food from player
                 heldItem.shrink(request.getRequestedAmount());
                 
+                // Give player the payment (emerald coins)
+                ItemStack payment = request.getPrice().toItemStack();
+                if (!player.addItem(payment)) {
+                    // If inventory is full, drop the coins
+                    player.drop(payment, false);
+                }
+                
                 // Customer received food - transition to next state
                 customer.setCustomerState(maxitoson.tavernkeeper.entities.ai.CustomerState.FINDING_SEAT);
                 customer.setFoodRequest(null);
                 
                 // Success message
                 player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Served customer " + request.getDisplayName() + "!"),
+                    net.minecraft.network.chat.Component.literal("Served customer " + request.getDisplayName() + "! +" + request.getPrice().getDisplayName()),
                     true // action bar
                 );
                 
                 // Play sound
                 customer.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
+                player.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F); // TODO: Make cash sound
                 
-                LOGGER.info("Player {} served customer {} with {}", 
-                    player.getName().getString(), customer.getId(), request.getDisplayName());
+                LOGGER.info("Player {} served customer {} with {} and received {}", 
+                    player.getName().getString(), customer.getId(), request.getDisplayName(), request.getPrice().getDisplayName());
                 
                 event.setCanceled(true);
             } else {

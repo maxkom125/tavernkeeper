@@ -32,11 +32,17 @@ import org.slf4j.Logger;
 public class CustomerEntity extends AbstractVillager {
     private static final Logger LOGGER = LogUtils.getLogger();
     
+    // Entity attributes - similar to Villager constants (Villager line 116)
+    public static final float SPEED_MODIFIER = 0.9F; // Speed multiplier for AI behaviors
+    public static final double MOVEMENT_SPEED = 0.5; // Base movement speed attribute
+    public static final double MAX_HEALTH = 20.0;    // Health points
+    public static final double FOLLOW_RANGE = 48.0;  // How far entity can detect targets
+    
     // Customer state tracking
     private CustomerState customerState = CustomerState.FINDING_QUEUE;
     private CustomerState stateBeforePanic = null;
     private net.minecraft.core.BlockPos targetPosition = null; // Target position (lectern or chair)
-    private maxitoson.tavernkeeper.entities.FoodRequest foodRequest = null; // What food customer wants
+    private maxitoson.tavernkeeper.tavern.economy.FoodRequest foodRequest = null; // What food customer wants
     private net.minecraft.core.BlockPos spawnPosition = null; // Where customer spawned (for returning when leaving)
     
     // Brain configuration - similar to Villager (line 131-132)
@@ -110,7 +116,7 @@ public class CustomerEntity extends AbstractVillager {
     
     // Similar to Villager.registerBrainGoals() (line 169-191)
     private void registerBrainGoals(Brain<CustomerEntity> brain) {
-        float speedModifier = 0.5F; // Base speed for behaviors (same as Villager line 116)
+        float speedModifier = SPEED_MODIFIER; // Use class constant for behavior speed
         
         // Add activities with their behavior packages (same order as Villager)
         brain.addActivity(Activity.CORE, CustomerGoalPackages.getCorePackage(speedModifier));
@@ -132,9 +138,9 @@ public class CustomerEntity extends AbstractVillager {
     // Similar to Villager.createAttributes() (line 201-203)
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-            .add(Attributes.MAX_HEALTH, 20.0)
-            .add(Attributes.MOVEMENT_SPEED, 0.3)
-            .add(Attributes.FOLLOW_RANGE, 48.0);
+            .add(Attributes.MAX_HEALTH, MAX_HEALTH)
+            .add(Attributes.MOVEMENT_SPEED, MOVEMENT_SPEED)
+            .add(Attributes.FOLLOW_RANGE, FOLLOW_RANGE);
     }
     
     // Similar to Villager.customServerAiStep() (line 209-247)
@@ -185,11 +191,11 @@ public class CustomerEntity extends AbstractVillager {
     }
     
     // Food request management
-    public maxitoson.tavernkeeper.entities.FoodRequest getFoodRequest() {
+    public maxitoson.tavernkeeper.tavern.economy.FoodRequest getFoodRequest() {
         return foodRequest;
     }
     
-    public void setFoodRequest(maxitoson.tavernkeeper.entities.FoodRequest request) {
+    public void setFoodRequest(maxitoson.tavernkeeper.tavern.economy.FoodRequest request) {
         this.foodRequest = request;
     }
     

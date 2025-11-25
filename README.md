@@ -28,7 +28,7 @@ Run a fully functional tavern in Minecraft:
 2. **Customers spawn automatically** (~30 seconds intervals when OPEN)
 3. **Customer walks to lectern** and shows food request (item above head)
 4. **You serve them** - right-click customer while holding the requested food
-5. **Customer pays** (gives you emerald) and walks to a chair
+5. **Customer pays** (gives you coins) and walks to a chair
 6. **Customer eats** then leaves and despawns
 7. **Toggle CLOSED** when you need a break - no new customers will spawn
 

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "tavernkeeper:diamond_coin"
+    }
+  ],
+  "result": {
+    "count": 9,
+    "id": "tavernkeeper:gold_coin"
+  }
+}

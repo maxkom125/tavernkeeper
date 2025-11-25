@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "E": {
+      "item": "minecraft:emerald"
+    },
+    "N": {
+      "item": "tavernkeeper:netherite_coin"
+    }
+  },
+  "pattern": [
+    "NNN",
+    "NEN",
+    "NNN"
+  ],
+  "result": {
+    "count": 8,
+    "id": "tavernkeeper:emerald_coin"
+  }
+}

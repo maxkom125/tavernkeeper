@@ -1,10 +1,12 @@
 ### High Priority (Next Focus)
 - [x] Add taver open/close mechanic
 - [ ] **Economy System**
-  - [ ] Create internal money
-  - [ ] Track earned money
+  - [x] Create internal money (Coins: Copper -> Emerald)
+  - [ ] Add Wallet to store and convert money
+  - [ ] Track earned money (Statistics/GUI)
   - [ ] Unlock upgrades (capacity, spawn rate, areas max size, chairs max amount)
-  - [ ] Different food = different payment amounts
+  - [x] Different food = different payment amounts
+  - [ ] Add advancments: coins earned milestones
 - [ ] Add sleeping requests
 
 ### Medium Priority
@@ -25,4 +27,6 @@
 - [ ] **Visual polish** (particles, sounds, effects)
 
 Other ideas
+Customers leave tips on the tables
+Some customers can steal tips - hit to get the money back! - higher tip=higher chance
 Rooms with different number of beds - groups/families coming - searching for a specific bed count

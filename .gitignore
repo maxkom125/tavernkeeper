@@ -42,6 +42,10 @@ logs/
 *.swp
 *~
 
+# Unnecessary files
+**/textures/item/unused_images/
+
 # Other
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+.cache/

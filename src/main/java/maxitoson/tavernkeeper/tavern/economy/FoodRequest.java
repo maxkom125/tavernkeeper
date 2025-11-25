@@ -1,30 +1,21 @@
-package maxitoson.tavernkeeper.entities;
+package maxitoson.tavernkeeper.tavern.economy;
 
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /**
- * Represents a customer's food request
- * Currently hardcoded to carrots, but structured for future expansion
+ * Represents a customer's food request with pricing
+ * Contains item, amount, and payment information
  */
 public class FoodRequest {
     private final Item requestedItem;
     private final int requestedAmount;
+    private final Price price;
     
-    // For future: could add price, satisfaction value, etc.
-    
-    public FoodRequest(Item item, int amount) {
+    public FoodRequest(Item item, int amount, Price price) {
         this.requestedItem = item;
         this.requestedAmount = amount;
-    }
-    
-    /**
-     * Create a default food request (currently always carrots)
-     * TODO: In the future, this could be randomized or based on tavern menu
-     */
-    public static FoodRequest createDefault() {
-        return new FoodRequest(Items.CARROT, 3);
+        this.price = price;
     }
     
     public Item getRequestedItem() {
@@ -35,18 +26,15 @@ public class FoodRequest {
         return requestedAmount;
     }
     
+    public Price getPrice() {
+        return price;
+    }
+    
     /**
      * Check if the given ItemStack satisfies this request
      */
     public boolean isSatisfiedBy(ItemStack stack) {
         return stack.is(requestedItem) && stack.getCount() >= requestedAmount;
-    }
-    
-    /**
-     * Create an ItemStack representing this request (for display purposes)
-     */
-    public ItemStack toDisplayStack() {
-        return new ItemStack(requestedItem, requestedAmount);
     }
     
     /**

@@ -72,9 +72,9 @@ tavernkeeper/
 - **Customer AI Lifecycle**:
   1. Spawn near tavern
   2. Walk to lectern and queue
-  3. Show food request (item above head + emerald in hand)
+  3. Show food request (item above head + custom coin in hand)
   4. Player serves requested food (right-click with food in hand)
-  5. Customer pays (gives emerald)
+  5. Customer pays (gives coins)
   6. Walk to available chair
   7. Sit and eat food
   8. Leave and despawn
@@ -87,6 +87,20 @@ tavernkeeper/
 - **Business Control**: Controls customer spawning
   - OPEN: Customers spawn normally (~30 seconds intervals)
   - CLOSED: No new customers spawn
+
+### 10. **Economy System** 💰
+- **Currency**: Custom coin items with tiered value
+  - Copper Coin (Lowest)
+  - Iron Coin
+  - Gold Coin
+  - Diamond Coin
+  - Netherite Coin
+  - Emerald Coin (Highest)
+- **Payment Logic**:
+  - Each food request has a specific price
+  - Customers pay immediately upon being served
+  - Coins are added to player inventory (or dropped if full)
+  - Visual & Audio feedback on payment
 
 ---
 

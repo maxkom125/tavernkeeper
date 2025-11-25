@@ -3,7 +3,8 @@ package maxitoson.tavernkeeper.entities.ai.behavior;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
-import maxitoson.tavernkeeper.entities.FoodRequest;
+import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
+import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -36,19 +37,19 @@ public class WaitAtLectern extends Behavior<CustomerEntity> {
     
     @Override
     protected void start(ServerLevel level, CustomerEntity customer, long gameTime) {
-        // Create food request (currently always carrots, but ready for expansion)
-        FoodRequest request = FoodRequest.createDefault();
+        // Get food request from tavern's economy manager
+        Tavern tavern = Tavern.get(level);
+        FoodRequest request = tavern.getEconomyManager().createFoodRequest();
         customer.setFoodRequest(request);
         
-        // Put emerald in main hand - will be rendered in crossed arms position by CrossedArmsItemLayer
-        ItemStack emerald = new ItemStack(net.minecraft.world.item.Items.EMERALD, 1);
-        customer.setItemSlot(EquipmentSlot.MAINHAND, emerald);
+        // Set rendered items using request data
+        customer.setItemSlot(EquipmentSlot.MAINHAND, request.getPrice().toItemStack());
+        customer.setItemSlot(EquipmentSlot.HEAD, 
+            new ItemStack(request.getRequestedItem(), request.getRequestedAmount()));
         
-        // Put the requested food in HEAD slot - will be rendered floating above by FoodRequestLayer
-        customer.setItemSlot(EquipmentSlot.HEAD, request.toDisplayStack());
-        
-        LOGGER.info("Customer {} waiting at lectern for {} (holding emerald, showing {} above head)", 
-            customer.getId(), request.getDisplayName(), request.getDisplayName());
+        LOGGER.info("Customer {} waiting at lectern for {} (holding {}, showing {} above head)", 
+            customer.getId(), request.getDisplayName(), 
+            request.getPrice().getDisplayName(), request.getDisplayName());
     }
     
     @Override
