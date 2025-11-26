@@ -43,7 +43,7 @@ public class WaitAtLectern extends Behavior<CustomerEntity> {
         customer.setFoodRequest(request);
         
         // Set rendered items using request data
-        customer.setItemSlot(EquipmentSlot.MAINHAND, request.getPrice().toItemStack());
+        customer.setItemSlot(EquipmentSlot.MAINHAND, request.getPrice().toHighestTierStack());
         customer.setItemSlot(EquipmentSlot.HEAD, 
             new ItemStack(request.getRequestedItem(), request.getRequestedAmount()));
         

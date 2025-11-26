@@ -1,18 +1,20 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "misc",
+  "category": "equipment",
   "key": {
     "C": {
       "item": "tavernkeeper:copper_coin"
+    },
+    "L": {
+      "item": "minecraft:leather"
     }
   },
   "pattern": [
-    "CCC",
-    "CCC",
-    "CCC"
+    "LCL",
+    " L "
   ],
   "result": {
     "count": 1,
-    "id": "tavernkeeper:iron_coin"
+    "id": "tavernkeeper:wallet"
   }
 }

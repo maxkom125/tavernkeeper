@@ -1,6 +1,6 @@
 # 🍺 TavernKeeper Mod
 
-A Minecraft mod that lets you run your own tavern! Mark areas, serve customers, and earn emeralds.
+A Minecraft mod that lets you run your own tavern! Mark areas, serve customers, and earn coins!
 
 ## Features ✨
 

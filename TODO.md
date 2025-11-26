@@ -1,8 +1,8 @@
 ### High Priority (Next Focus)
 - [x] Add taver open/close mechanic
 - [ ] **Economy System**
-  - [x] Create internal money (Coins: Copper -> Emerald)
-  - [ ] Add Wallet to store and convert money
+  - [x] Create internal money (Coins: Copper -> Netherite)
+  - [x] Wallet: auto-pickup, auto-convert (100:1), manual extract
   - [ ] Track earned money (Statistics/GUI)
   - [ ] Unlock upgrades (capacity, spawn rate, areas max size, chairs max amount)
   - [x] Different food = different payment amounts

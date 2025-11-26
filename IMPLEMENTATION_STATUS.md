@@ -89,18 +89,14 @@ tavernkeeper/
   - CLOSED: No new customers spawn
 
 ### 10. **Economy System** 💰
-- **Currency**: Custom coin items with tiered value
-  - Copper Coin (Lowest)
-  - Iron Coin
-  - Gold Coin
-  - Diamond Coin
-  - Netherite Coin
-  - Emerald Coin (Highest)
-- **Payment Logic**:
-  - Each food request has a specific price
-  - Customers pay immediately upon being served
-  - Coins are added to player inventory (or dropped if full)
-  - Visual & Audio feedback on payment
+- **Currency**: 5-tier coin system (100:1 conversion rate)
+  - Copper → Iron → Gold → Diamond → Netherite
+- **Wallet (Coin Purse)**:
+  - Auto-collects coins on pickup from ground
+  - Auto-converts 100 lower → 1 higher tier
+  - Right-click coins to store, right-click empty to extract
+  - Intercepts customer payments automatically
+- **Payment**: Full coin breakdown (e.g., 232 copper → 2 Iron + 32 Copper)
 
 ---
 

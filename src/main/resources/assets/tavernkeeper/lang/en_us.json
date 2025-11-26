@@ -6,7 +6,8 @@
   "item.tavernkeeper.gold_coin": "Gold Coin",
   "item.tavernkeeper.diamond_coin": "Diamond Coin",
   "item.tavernkeeper.netherite_coin": "Netherite Coin",
-  "item.tavernkeeper.emerald_coin": "Emerald Coin",
+  "item.tavernkeeper.wallet": "Coin Purse",
+  "item.tavernkeeper.wallet.tooltip": "Right-click coins to store, right-click empty slot to extract",
   "item.tavernkeeper.example_item": "Example Item",
   "item.tavernkeeper.customer_spawn_egg": "Customer Spawn Egg"
 }

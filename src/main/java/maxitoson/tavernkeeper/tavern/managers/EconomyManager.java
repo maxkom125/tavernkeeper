@@ -48,8 +48,12 @@ public class EconomyManager {
         FoodProperties foodProps = foodItem.getFoodProperties(stack, null);
         
         // Get food quality values (nutrition + saturation)
-        int nutrition = foodProps.nutrition();
-        float saturationModifier = foodProps.saturation();
+        // Defensive null check in case item doesn't have food properties
+        int nutrition = foodProps != null ? foodProps.nutrition() : 1;
+        float saturationModifier = foodProps != null ? foodProps.saturation() : 0.0f;
+        if (foodProps == null) {
+            LOGGER.warn("Food item {} has no food properties, using defaults", foodItem);
+        }
         float totalQuality = nutrition + saturationModifier;
         
         // Linear formula, gives: Melon ~10, Carrot ~8, Bread ~5, Steak ~1
@@ -60,7 +64,7 @@ public class EconomyManager {
         
         // Calculate price: (nutrition + saturation) * amount
         int priceAmount = Math.max(1, (int) Math.ceil(totalQuality * amount));
-        Price price = new Price(TavernKeeperMod.EMERALD_COIN.get(), priceAmount);
+        Price price = new Price(TavernKeeperMod.COPPER_COIN.get(), priceAmount);
         
         FoodRequest request = new FoodRequest(foodItem, amount, price);
         LOGGER.debug("Created food request: {} for {} (quality: {}, maxAmount: {})", 

@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.datagen.DataGenerators;
 import maxitoson.tavernkeeper.areas.AreaCommand;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
+import maxitoson.tavernkeeper.items.WalletItem;
 import maxitoson.tavernkeeper.items.MarkingCane;
 import maxitoson.tavernkeeper.items.TavernItem;
 import maxitoson.tavernkeeper.network.NetworkHandler;
@@ -20,6 +21,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -33,6 +35,7 @@ import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import maxitoson.tavernkeeper.events.CustomerPaymentEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.bus.api.IEventBus;
@@ -80,10 +83,11 @@ public class TavernKeeperMod
     // Currency System - Coins (in order: lowest to highest tier)
     public static final DeferredItem<Item> COPPER_COIN = ITEMS.registerSimpleItem("copper_coin", new Item.Properties().stacksTo(64));
     public static final DeferredItem<Item> IRON_COIN = ITEMS.registerSimpleItem("iron_coin", new Item.Properties().stacksTo(64));
-    public static final DeferredItem<Item> GOLD_COIN = ITEMS.registerSimpleItem("gold_coin", new Item.Properties().stacksTo(64));
-    public static final DeferredItem<Item> DIAMOND_COIN = ITEMS.registerSimpleItem("diamond_coin", new Item.Properties().stacksTo(64));
-    public static final DeferredItem<Item> NETHERITE_COIN = ITEMS.registerSimpleItem("netherite_coin", new Item.Properties().stacksTo(64));
-    public static final DeferredItem<Item> EMERALD_COIN = ITEMS.registerSimpleItem("emerald_coin", new Item.Properties().stacksTo(64)); // Special currency
+    public static final DeferredItem<Item> GOLD_COIN = ITEMS.registerSimpleItem("gold_coin", new Item.Properties().stacksTo(64).rarity(Rarity.UNCOMMON));
+    public static final DeferredItem<Item> DIAMOND_COIN = ITEMS.registerSimpleItem("diamond_coin", new Item.Properties().stacksTo(64).rarity(Rarity.RARE));
+    public static final DeferredItem<Item> NETHERITE_COIN = ITEMS.registerSimpleItem("netherite_coin", new Item.Properties().stacksTo(64).rarity(Rarity.EPIC));
+    
+    public static final DeferredItem<Item> WALLET = ITEMS.registerItem("wallet", WalletItem::new, new Item.Properties().stacksTo(1));
     
     // Register Customer Entity (uses Villager's properties)
     public static final DeferredHolder<EntityType<?>, EntityType<CustomerEntity>> CUSTOMER = ENTITY_TYPES.register("customer", 
@@ -112,7 +116,7 @@ public class TavernKeeperMod
                 output.accept(GOLD_COIN.get());
                 output.accept(DIAMOND_COIN.get());
                 output.accept(NETHERITE_COIN.get());
-                output.accept(EMERALD_COIN.get()); // Special currency
+                output.accept(WALLET.get());
                 output.accept(CUSTOMER_SPAWN_EGG.get()); // Customer spawn egg for testing
                 output.accept(EXAMPLE_ITEM.get()); // Example item
             }).build());
@@ -336,6 +340,7 @@ public class TavernKeeperMod
         if (event.getLevel().isClientSide()) return;
         
         if (event.getTarget() instanceof CustomerEntity customer) {
+            // TODO: Put in a handler class (?)
             Player player = event.getEntity();
             ItemStack heldItem = player.getItemInHand(event.getHand());
             
@@ -355,12 +360,9 @@ public class TavernKeeperMod
                 // Remove food from player
                 heldItem.shrink(request.getRequestedAmount());
                 
-                // Give player the payment (emerald coins)
-                ItemStack payment = request.getPrice().toItemStack();
-                if (!player.addItem(payment)) {
-                    // If inventory is full, drop the coins
-                    player.drop(payment, false);
-                }
+                // Give player the payment (full coin breakdown) via event
+                // WalletHandler will add to wallet or fall back to inventory
+                NeoForge.EVENT_BUS.post(new CustomerPaymentEvent(player, customer, request));
                 
                 // Customer received food - transition to next state
                 customer.setCustomerState(maxitoson.tavernkeeper.entities.ai.CustomerState.FINDING_SEAT);

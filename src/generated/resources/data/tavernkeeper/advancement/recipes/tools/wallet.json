@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_iron_coin": {
+    "has_copper_coin": {
       "conditions": {
         "items": [
           {
-            "items": "tavernkeeper:iron_coin"
+            "items": "tavernkeeper:copper_coin"
           }
         ]
       },
@@ -13,7 +13,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "tavernkeeper:gold_coin_from_iron"
+        "recipe": "tavernkeeper:wallet"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -21,12 +21,12 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_iron_coin"
+      "has_copper_coin"
     ]
   ],
   "rewards": {
     "recipes": [
-      "tavernkeeper:gold_coin_from_iron"
+      "tavernkeeper:wallet"
     ]
   }
 }

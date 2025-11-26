@@ -1,6 +1,7 @@
 {
   "parent": "item/generated",
   "textures": {
-    "layer0": "tavernkeeper:item/coins/emerald_coin"
+    "layer0": "tavernkeeper:item/wallet"
   }
 }
+
