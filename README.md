@@ -32,6 +32,12 @@ Run a fully functional tavern in Minecraft:
 6. **Customer eats** then leaves and despawns
 7. **Toggle CLOSED** when you need a break - no new customers will spawn
 
+### Custom Economy
+- **5-tier coins**: Copper → Iron → Gold → Diamond → Netherite (100:1 conversion)
+- **Wallet**: Auto-collects coins, auto-converts to higher tiers
+- **Dynamic pricing**: better food = higher pay
+- *Coming soon: Dish of the Week bonuses, demand tweaks*
+
 ## Documentation
 
 - **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Complete documentation (how to use, technical details)
