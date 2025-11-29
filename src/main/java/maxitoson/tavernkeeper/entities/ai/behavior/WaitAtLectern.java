@@ -37,9 +37,9 @@ public class WaitAtLectern extends Behavior<CustomerEntity> {
     
     @Override
     protected void start(ServerLevel level, CustomerEntity customer, long gameTime) {
-        // Get food request from tavern's economy manager
+        // Get food request from tavern -> economy manager
         Tavern tavern = Tavern.get(level);
-        FoodRequest request = tavern.getEconomyManager().createFoodRequest();
+        FoodRequest request = tavern.createFoodRequest();
         customer.setFoodRequest(request);
         
         // Set rendered items using request data

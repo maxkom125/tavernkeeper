@@ -1,14 +1,13 @@
 package maxitoson.tavernkeeper.tavern.managers;
-
-import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import maxitoson.tavernkeeper.tavern.economy.Price;
+import maxitoson.tavernkeeper.TavernKeeperMod;
+
+import com.mojang.logging.LogUtils;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
-// import gold ingot
 import net.minecraft.world.item.Items;
 import org.slf4j.Logger;
-import maxitoson.tavernkeeper.TavernKeeperMod;
 
 import java.util.Random;
 

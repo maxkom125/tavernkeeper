@@ -4,8 +4,6 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import maxitoson.tavernkeeper.items.MarkingCane;
-import maxitoson.tavernkeeper.network.NetworkHandler;
-import maxitoson.tavernkeeper.network.SyncAreasPacket;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
 import net.minecraft.commands.CommandSourceStack;
@@ -25,14 +23,10 @@ public class AreaCommand {
         dispatcher.register(Commands.literal("tavernarea")
             .then(Commands.literal("save")
                 .then(Commands.literal("dining")
-                    .then(Commands.argument("name", StringArgumentType.string())
-                        .executes(ctx -> saveArea(ctx, AreaType.DINING))
-                    )
+                    .executes(ctx -> saveArea(ctx, AreaType.DINING))
                 )
                 .then(Commands.literal("sleeping")
-                    .then(Commands.argument("name", StringArgumentType.string())
-                        .executes(ctx -> saveArea(ctx, AreaType.SLEEPING))
-                    )
+                    .executes(ctx -> saveArea(ctx, AreaType.SLEEPING))
                 )
             )
             .then(Commands.literal("list")
@@ -51,9 +45,7 @@ public class AreaCommand {
     
     private static int saveArea(CommandContext<CommandSourceStack> ctx, AreaType type) {
         if (ctx.getSource().getEntity() instanceof ServerPlayer player) {
-            String name = StringArgumentType.getString(ctx, "name");
-            
-            if (MarkingCane.saveArea(player, name, type)) {
+            if (MarkingCane.saveArea(player, type, player.serverLevel())) {
                 return 1;
             } else {
                 player.sendSystemMessage(Component.literal("§c[Tavern Area] §rFailed to save area. Make sure you've selected an area first!"));
@@ -68,6 +60,17 @@ public class AreaCommand {
             ServerLevel level = player.serverLevel();
             Tavern tavern = Tavern.get(level);
             Collection<BaseSpace> spaces = tavern.getAllSpaces();
+            
+            // Show tavern owner info
+            if (tavern.hasOwner()) {
+                player.sendSystemMessage(Component.literal(
+                    String.format("§6[Tavern Area] §rOwner: §e%s", tavern.getOwnerName())
+                ));
+            } else {
+                player.sendSystemMessage(Component.literal(
+                    "§6[Tavern Area] §rNo owner yet (create an area to claim ownership)"
+                ));
+            }
             
             if (spaces.isEmpty()) {
                 player.sendSystemMessage(Component.literal("§6[Tavern Area] §rNo areas defined yet."));
@@ -112,26 +115,33 @@ public class AreaCommand {
             }
             
             if (toDelete != null) {
-                TavernArea area = toDelete.getArea();
-                tavern.deleteArea(area.getId());
-                player.sendSystemMessage(Component.literal(
-                    String.format("§6[Tavern Area] §rDeleted %s '%s'", 
-                        area.getType().getColoredName(), name)
-                ));
+                Tavern.DeletionResult result = tavern.deleteArea(toDelete.getArea().getId());
                 
-                // Sync areas to all players
-                java.util.List<TavernArea> areas = tavern.getAllSpaces().stream()
-                    .map(BaseSpace::getArea)
-                    .toList();
-                NetworkHandler.sendToAllPlayers(new SyncAreasPacket(areas));
-                
-                return 1;
-            } else {
-                player.sendSystemMessage(Component.literal(
-                    "§c[Tavern Area] §rArea '" + name + "' not found!"
-                ));
-                return 0;
+                if (result != null) {
+                    TavernArea deletedArea = result.getDeletedArea();
+                    player.sendSystemMessage(Component.literal(
+                        String.format("§6[Tavern Area] §rDeleted %s '%s'", 
+                            deletedArea.getType().getColoredName(), deletedArea.getName())
+                    ));
+                    
+                    // Notify if they lost ownership
+                    if (result.wasOwnershipLost()) {
+                        player.sendSystemMessage(Component.literal(
+                            "§6[Tavern Area] §eTavern is now unclaimed (last area deleted)"
+                        ));
+                    }
+                    
+                    // Sync areas to all players
+                    tavern.syncAreasToAllClients();
+                    
+                    return 1;
+                }
             }
+            
+            player.sendSystemMessage(Component.literal(
+                "§c[Tavern Area] §rArea '" + name + "' not found!"
+            ));
+            return 0;
         }
         return 0;
     }

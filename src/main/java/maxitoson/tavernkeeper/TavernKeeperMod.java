@@ -2,14 +2,11 @@ package maxitoson.tavernkeeper;
 
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.datagen.DataGenerators;
-import maxitoson.tavernkeeper.areas.AreaCommand;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
-import maxitoson.tavernkeeper.items.WalletItem;
 import maxitoson.tavernkeeper.items.MarkingCane;
+import maxitoson.tavernkeeper.items.WalletItem;
 import maxitoson.tavernkeeper.items.TavernItem;
 import maxitoson.tavernkeeper.network.NetworkHandler;
-import maxitoson.tavernkeeper.network.SyncAreasPacket;
-import maxitoson.tavernkeeper.tavern.Tavern;
 // import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
@@ -20,7 +17,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -28,18 +24,9 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import maxitoson.tavernkeeper.events.CustomerPaymentEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 // import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
@@ -135,9 +122,6 @@ public class TavernKeeperMod
         // Register the Deferred Register to the mod event bus so entities get registered
         ENTITY_TYPES.register(modEventBus);
 
-        // Register ourselves for server and other game events we are interested in
-        NeoForge.EVENT_BUS.register(this);
-
         // Register the item to a creative tab
         modEventBus.addListener(this::addCreative);
         
@@ -179,222 +163,24 @@ public class TavernKeeperMod
     {
         event.put(CUSTOMER.get(), CustomerEntity.createAttributes().build());
     }
-
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
-    @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event)
-    {
-        // Do something when the server starts
-        LOGGER.info("HELLO from server starting");
-    }
     
-    // Handle level tick for tavern lifecycle
-    @SubscribeEvent
-    public void onLevelTick(LevelTickEvent.Post event)
-    {
-        // Only tick if it's server-side and Overworld
-        if (event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel 
-            && serverLevel.dimension() == net.minecraft.world.level.Level.OVERWORLD) {
-            Tavern tavern = Tavern.get(serverLevel);
-            tavern.tick();
-        }
-    }
-
-    // Welcome message when player joins the world
-    @SubscribeEvent
-    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event)
-    {
-        Player player = event.getEntity();
-        player.sendSystemMessage(Component.literal("§6[Tavern Keeper] §rWelcome to your tavern! Your journey as a keeper begins! 🍺"));
-        LOGGER.info("Player {} joined - mod is working!", player.getName().getString());
-        
-        // Sync areas to the joining player
-        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-            net.minecraft.server.level.ServerLevel level = serverPlayer.serverLevel();
-            Tavern tavern = Tavern.get(level);
-            // Convert spaces to TavernArea for network packet
-            java.util.List<maxitoson.tavernkeeper.areas.TavernArea> areas = tavern.getAllSpaces().stream()
-                .map(space -> space.getArea())
-                .toList();
-            NetworkHandler.sendToPlayer(new SyncAreasPacket(areas), serverPlayer);
-        }
-    }
-    
-    // Handle right-click on block - HIGH PRIORITY to intercept sign interactions before editor opens
-    // Cancel the event if the player is holding a marking cane and clicking on a sign
-    // If the player is clicking on a tavern sign, toggle the tavern sign
-    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGH)
-    public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event)
-    {
-        Player player = event.getEntity();
-        ItemStack heldItem = player.getItemInHand(event.getHand());
-        net.minecraft.core.BlockPos pos = event.getPos();
-        net.minecraft.world.level.Level level = event.getLevel();
-        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
-        
-        // Client-side: prevent sign editor from opening if holding marking cane
-        if (level.isClientSide) {
-            if (state.getBlock() instanceof net.minecraft.world.level.block.SignBlock 
-                && heldItem.getItem() instanceof MarkingCane) {
-                event.setCanceled(true);
-                event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
-            }
-            return;
-        }
-        
-        // Server-side routing logic
-        net.minecraft.server.level.ServerLevel serverLevel = (net.minecraft.server.level.ServerLevel) level;
-        Tavern tavern = Tavern.get(serverLevel);
-        
-        // Route 1: Holding marking cane + clicking sign → delegate to MarkingCane
-        if (heldItem.getItem() instanceof MarkingCane 
-            && state.getBlock() instanceof net.minecraft.world.level.block.SignBlock) {
-            MarkingCane.handleSignClick(serverLevel, pos, player);
-            event.setCanceled(true);
-            event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
-            return;
-        }
-        
-        // Route 2: Clicking on tavern sign (without marking cane) → delegate to Tavern
-        if (tavern.isTavernSign(pos)) {
-            tavern.toggleOpenClosed(player);
-            event.setCanceled(true);
-            event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
-            return;
-        }
-    }
-    
-    // Handle left-click on block with Marking Cane (clears selection or deletes area)
-    @SubscribeEvent
-    public void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event)
-    {
-        Player player = event.getEntity();
-        if (player.getMainHandItem().getItem() instanceof MarkingCane) {
-            if (!player.level().isClientSide) {
-                MarkingCane.handleLeftClick(player, event.getPos(), 
-                    (net.minecraft.server.level.ServerLevel) player.level());
-            }
-            event.setCanceled(true); // Prevent block breaking
-        }
-    }
-    
-    // Register commands
-    @SubscribeEvent
-    public void onRegisterCommands(RegisterCommandsEvent event)
-    {
-        AreaCommand.register(event.getDispatcher());
-        LOGGER.info("Registered tavern area commands");
-    }
-
-    // Handle block placement to update furniture in areas
-    @SubscribeEvent
-    public void onBlockPlace(net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent event) {
-        if (event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-            net.minecraft.core.BlockPos pos = event.getPos();
-            Tavern tavern = Tavern.get(serverLevel);
-            
-            // If placing a block at the tavern sign position, clear it (sign was replaced)
-            if (tavern.isTavernSign(pos) && !(event.getState().getBlock() instanceof net.minecraft.world.level.block.SignBlock)) {
-                LOGGER.info("Block placed at tavern sign position {} - clearing tavern sign", pos);
-                tavern.clearTavernSign();
-            }
-            
-            tavern.getSpacesAt(pos).forEach(space -> space.onBlockUpdated(pos, event.getState()));
-        }
-    }
-
-    // Handle block breaking to remove furniture from areas
-    @SubscribeEvent
-    public void onBlockBreak(net.neoforged.neoforge.event.level.BlockEvent.BreakEvent event) {
-        if (event.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-            net.minecraft.core.BlockPos pos = event.getPos();
-            Tavern tavern = Tavern.get(serverLevel);
-            
-            // If breaking the tavern sign block, clear the reference
-            if (tavern.isTavernSign(pos)) {
-                LOGGER.info("Tavern sign at {} was broken - clearing tavern sign", pos);
-                tavern.clearTavernSign();
-            }
-            
-            // Pass the OLD state to handle multi-block removal correctly
-            tavern.getSpacesAt(pos).forEach(space -> space.onBlockBroken(pos, event.getState()));
-        }
-    }
-    
-    // Make skeletons target customers (zombies already target AbstractVillager naturally)
-    @SubscribeEvent
-    public void onEntityJoinLevel(EntityJoinLevelEvent event) {
-        if (event.getEntity() instanceof net.minecraft.world.entity.monster.AbstractSkeleton skeleton && !event.getLevel().isClientSide()) {
-            // Add a goal to target customers (priority 3, same as zombie's villager targeting)
-            skeleton.targetSelector.addGoal(3, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(
-                skeleton, 
-                CustomerEntity.class, 
-                true
-            ));
-        }
-    }
-    
-    // Handle player right-clicking customer to serve them
-    @SubscribeEvent
-    public void onPlayerInteractEntity(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.EntityInteract event) {
-        if (event.getLevel().isClientSide()) return;
-        
-        if (event.getTarget() instanceof CustomerEntity customer) {
-            // TODO: Put in a handler class (?)
-            Player player = event.getEntity();
-            ItemStack heldItem = player.getItemInHand(event.getHand());
-            
-            // Check if customer is waiting for service
-            if (customer.getCustomerState() != maxitoson.tavernkeeper.entities.ai.CustomerState.WAITING_SERVICE) {
-                return;
-            }
-            
-            maxitoson.tavernkeeper.tavern.economy.FoodRequest request = customer.getFoodRequest();
-            if (request == null) {
-                LOGGER.warn("Customer {} is waiting for service but has no food request!", customer.getId());
-                return;
-            }
-            
-            // Check if player has the right food
-            if (request.isSatisfiedBy(heldItem)) {
-                // Remove food from player
-                heldItem.shrink(request.getRequestedAmount());
-                
-                // Give player the payment (full coin breakdown) via event
-                // WalletHandler will add to wallet or fall back to inventory
-                NeoForge.EVENT_BUS.post(new CustomerPaymentEvent(player, customer, request));
-                
-                // Customer received food - transition to next state
-                customer.setCustomerState(maxitoson.tavernkeeper.entities.ai.CustomerState.FINDING_SEAT);
-                customer.setFoodRequest(null);
-                
-                // Success message
-                player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Served customer " + request.getDisplayName() + "! +" + request.getPrice().getDisplayName()),
-                    true // action bar
-                );
-                
-                // Play sound
-                customer.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
-                player.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F); // TODO: Make cash sound
-                
-                LOGGER.info("Player {} served customer {} with {} and received {}", 
-                    player.getName().getString(), customer.getId(), request.getDisplayName(), request.getPrice().getDisplayName());
-                
-                event.setCanceled(true);
-            } else {
-                // Wrong item or not enough
-                player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Customer wants " + request.getDisplayName() + "!"),
-                    true // action bar
-                );
-                
-                // Play sound
-                customer.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 1.0F, 1.0F);
-            }
-        }
-    }
-    
-
+    // ========== Event Handlers ==========
+    // Located in the events package.
+    //
+    // - events/PlayerInteractionHandler.java
+    //   * onRightClickBlock - Marking cane area selection, tavern sign interactions
+    //   * onLeftClickBlock - Marking cane area deletion
+    //   * onPlayerInteractEntity - Customer serving with food
+    //
+    // - events/WorldUpdateHandler.java
+    //   * onBlockPlace - Update furniture when blocks are placed
+    //   * onBlockBreak - Remove furniture when blocks are broken
+    //   * onEntityJoinLevel - Configure mob AI (skeletons target customers)
+    //
+    // - events/TavernLifecycleHandler.java
+    //   * onServerStarting - Server initialization
+    //   * onLevelTick - Tavern tick (customer spawning)
+    //   * onPlayerJoin - Welcome message + sync areas
+    //   * onRegisterCommands - Register tavern area commands
 }
 

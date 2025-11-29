@@ -3,8 +3,6 @@ package maxitoson.tavernkeeper.items;
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
-import maxitoson.tavernkeeper.network.NetworkHandler;
-import maxitoson.tavernkeeper.network.SyncAreasPacket;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
 import net.minecraft.ChatFormatting;
@@ -110,62 +108,37 @@ public class MarkingCane extends Item {
     
     /**
      * Handle right-click on a sign with marking cane to designate it as tavern sign
-     * Simply delegates to Tavern which owns all sign management
+     * Delegates to Tavern for business logic, handles UI display
      */
     public static void handleSignClick(net.minecraft.server.level.ServerLevel serverLevel,
                                        BlockPos pos, Player player) {
         LOGGER.info("MarkingCane: Designating sign at {} as tavern sign", pos);
         
-        // Delegate to Tavern - it owns all sign management
+        // Delegate to Tavern for business logic
         Tavern tavern = Tavern.get(serverLevel);
-        tavern.setTavernSign(pos, player);
+        maxitoson.tavernkeeper.tavern.Tavern.SignSetResult result = tavern.setTavernSign(pos);
+        
+        // UI layer interprets result
+        if (result.wasAlreadySet()) {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "§6[Marking Cane] §rThis is already your tavern sign!"
+            ));
+        } else {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "§6[Marking Cane] §rThis sign is now your tavern sign! Right-click to toggle open/closed."
+            ));
+            player.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
+        }
     }
     
     /**
      * Auto-save area with the current mode and auto-generated name
      */
     private void autoSaveArea(Player player, net.minecraft.server.level.ServerLevel level) {
-        AreaSelection selection = getSelection(player);
-        if (selection == null || !selection.isComplete()) {
-            return;
-        }
-        
-        // Get current mode (imported from AreaMode)
-        maxitoson.tavernkeeper.areas.AreaType currentMode = 
-            maxitoson.tavernkeeper.areas.AreaMode.getMode(player);
-        
-        // Generate auto-name with number
-        Tavern tavern = Tavern.get(level);
-        String autoName = generateAutoName(tavern, currentMode);
-        
-        // Save the area through Tavern (aggregate root)
-        BaseSpace space = tavern.createArea(autoName, currentMode, 
-            selection.getMinPos(), selection.getMaxPos());
-        TavernArea area = space.getArea();
-        
-        player.sendSystemMessage(Component.literal(
-            String.format("§6[Marking Cane] §rSaved %s (§e%d blocks§r)", 
-                currentMode.getColoredName() + " " + autoName, area.getVolume())
-        ));
-        
-        // Sync areas to all players
-        java.util.List<TavernArea> areas = tavern.getAllSpaces().stream()
-            .map(BaseSpace::getArea)
-            .toList();
-        NetworkHandler.sendToAllPlayers(new SyncAreasPacket(areas));
-        
-        // Clear selection
-        clearSelection(player);
-    }
-    
-    /**
-     * Generate auto-name like "Dining #1", "Sleeping #2"
-     * Uses an ever-incrementing counter per type
-     */
-    private String generateAutoName(Tavern tavern, 
-                                    maxitoson.tavernkeeper.areas.AreaType type) {
-        int nextNumber = tavern.getNextCounter(type);
-        return "#" + nextNumber;
+        // Get current mode from player
+        AreaType currentMode = maxitoson.tavernkeeper.areas.AreaMode.getMode(player);
+        // Delegate to main save method
+        saveArea(player, currentMode, level);
     }
     
     public static AreaSelection getSelection(Player player) {
@@ -208,20 +181,25 @@ public class MarkingCane extends Item {
             
             if (pendingAreaId != null && pendingAreaId.equals(areaAtPos.getId())) {
                 // Second click on same area - delete it
-                String areaName = areaAtPos.getName();
-                AreaType areaType = areaAtPos.getType();
-                tavern.deleteArea(areaAtPos.getId());
+                Tavern.DeletionResult result = tavern.deleteArea(areaAtPos.getId());
                 
-                player.sendSystemMessage(Component.literal(
-                    String.format("§6[Marking Cane] §rDeleted %s %s", 
-                        areaType.getColoredName(), areaName)
-                ));
-                
-                // Sync to all players
-                java.util.List<TavernArea> areas = tavern.getAllSpaces().stream()
-                    .map(BaseSpace::getArea)
-                    .toList();
-                NetworkHandler.sendToAllPlayers(new SyncAreasPacket(areas));
+                if (result != null) {
+                    TavernArea deletedArea = result.getDeletedArea();
+                    player.sendSystemMessage(Component.literal(
+                        String.format("§6[Marking Cane] §rDeleted %s %s", 
+                            deletedArea.getType().getColoredName(), deletedArea.getName())
+                    ));
+                    
+                    // Notify if they lost ownership
+                    if (result.wasOwnershipLost()) {
+                        player.sendSystemMessage(Component.literal(
+                            "§6[Marking Cane] §eTavern is now unclaimed (last area deleted)"
+                        ));
+                    }
+                    
+                    // Sync to all players
+                    tavern.syncAreasToAllClients();
+                }
                 
                 // Clear pending deletion
                 PENDING_DELETIONS.remove(playerId);
@@ -240,30 +218,45 @@ public class MarkingCane extends Item {
     }
     
     /**
-     * Save the current selection as a tavern area
+     * Save the current selection as a tavern area with auto-generated name.
+     * Used by both marking cane and commands.
+     * 
+     * @param player The player creating the area
+     * @param type The area type
+     * @param level The server level
+     * @return true if saved successfully, false otherwise
      */
-    public static boolean saveArea(Player player, String name, AreaType type) {
+    public static boolean saveArea(Player player, AreaType type, net.minecraft.server.level.ServerLevel level) {
         AreaSelection selection = getSelection(player);
         if (selection == null || !selection.isComplete()) {
             player.sendSystemMessage(Component.literal("§c[Marking Cane] §rNo area selected! Select two positions first."));
             return false;
         }
         
-        if (!player.level().isClientSide && player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-            Tavern tavern = Tavern.get(serverLevel);
-            BaseSpace space = tavern.createArea(name, type, selection.getMinPos(), selection.getMaxPos());
-            TavernArea area = space.getArea();
-            
+        Tavern tavern = Tavern.get(level);
+        
+        Tavern.CreationResult result = tavern.createArea(type, selection.getMinPos(), selection.getMaxPos(), player);
+        TavernArea area = result.getCreatedArea();
+        
+        // Notify if player became owner
+        if (result.becameOwner()) {
             player.sendSystemMessage(Component.literal(
-                String.format("§6[Marking Cane] §rSaved %s '%s' (%d blocks)", 
-                    type.getColoredName(), name, area.getVolume())
+                "§6[Marking Cane] §aYou are now the tavern owner!"
             ));
-            
-            // Clear selection after saving
-            clearSelection(player);
-            return true;
         }
-        return false;
+        
+        // Show success message
+        player.sendSystemMessage(Component.literal(
+            String.format("§6[Marking Cane] §rSaved %s (§e%d blocks§r)", 
+                type.getColoredName() + " " + area.getName(), area.getVolume())
+        ));
+        
+        // Sync to all players
+        tavern.syncAreasToAllClients();
+        
+        // Clear selection
+        clearSelection(player);
+        return true;
     }
     
     /**

@@ -12,6 +12,7 @@
 - **Left-click**: Clear selection OR mark area for deletion
 - **Two-step delete**: Click area twice (red warning, cancel with right-click)
 - Tooltip shows all controls
+- **Simple 1-tavern-per-world**: First player to create area becomes owner
 
 ### 2. **Visual System**
 - **Live preview**: Box follows cursor after 1st corner
@@ -40,16 +41,23 @@
 ### 6. **Package Structure**
 ```
 tavernkeeper/
-├── items/          # MarkingCane, TavernItem
-├── areas/          # Types, Manager, Renderer, Commands
+├── TavernKeeperMod.java  # Registration only
+├── items/          # MarkingCane, TavernItem, WalletItem
+├── areas/          # Types, Renderer, Commands
 │   └── client/     # ModeInputHandler
+├── events/         # Event handlers (organized by domain)
+│   ├── PlayerInteractionHandler.java    # Player clicks & interactions
+│   ├── WorldUpdateHandler.java          # Block place/break, entity spawn
+│   └── TavernLifecycleHandler.java      # Tick, player join, commands
 ├── entities/       # CustomerEntity, AI behaviors
 │   └── ai/
 │       └── behavior/  # FindSeat, EatAtChair, Leave, etc.
 ├── tavern/         # Domain logic (DDD architecture)
-│   ├── managers/   # DiningManager, ServiceManager, CustomerManager
+│   ├── Tavern.java       # Aggregate root with result objects
+│   ├── managers/   # DiningManager, ServiceManager, CustomerManager, EconomyManager
 │   ├── spaces/     # DiningSpace, ServiceSpace, SleepingSpace
-│   └── furniture/  # Chair, Table, Lectern, Barrel, Bed
+│   ├── furniture/  # Chair, Table, ServiceLectern, ServiceBarrel
+│   └── economy/    # FoodRequest, Price, CoinRegistry
 ├── client/         # CustomerEntityRenderer, FoodRequestLayer
 └── network/        # NetworkHandler, SyncAreasPacket
 ```
@@ -143,21 +151,16 @@ tavernkeeper/
 ### Clean Layered Design (DDD)
 
 ```
-TavernKeeperMod
-  ↓
-Tavern (Aggregate Root)
-  ↓
-Managers (DiningManager, ServiceManager, CustomerManager)
-  ↓
-Spaces (DiningSpace, ServiceSpace, SleepingSpace)
-  ↓
-Furniture (Chair, Table, Lectern, Barrel, Bed)
+Event Handlers (UI Layer) → Tavern (Service Layer) → Managers → Spaces → Furniture
 ```
 
 **Key Principles:**
+- **UI/Business Separation**: Event handlers route to Tavern, which returns result objects
+- **Result Objects Pattern**: `CreationResult`, `DeletionResult` bridge business logic and UI
 - **Interface Segregation**: Managers use `TavernContext` interface
 - **Bottom-Up Validation**: Managers ask Tavern for permission/state
 - **Top-Down Creation**: Tavern creates and owns managers
+- **No Duplication**: Commands and items share logic through Tavern API
 - **No Circular Dependencies**: Clean, maintainable code
 
 ### Spawn System Details

@@ -46,6 +46,39 @@ public class CustomerManager {
     private static final int NUM_SPAWN_ATTEMPTS = 20; // Total attempts to find valid position
     private static final int SPAWN_SEARCH_RADIUS = 32; // Blocks from center to search
     
+    /**
+     * Result object for customer service attempts.
+     * Simple: null = do nothing, non-null = show feedback
+     */
+    public static class ServiceResult {
+        private final maxitoson.tavernkeeper.tavern.economy.FoodRequest request;
+        private final boolean success;
+        
+        private ServiceResult(maxitoson.tavernkeeper.tavern.economy.FoodRequest request, boolean success) {
+            this.request = request;
+            this.success = success;
+        }
+        
+        /** Player served correct food - show success message */
+        public static ServiceResult success(maxitoson.tavernkeeper.tavern.economy.FoodRequest request) {
+            return new ServiceResult(request, true);
+        }
+        
+        /** Player has wrong food - show what customer wants */
+        public static ServiceResult wrongFood(maxitoson.tavernkeeper.tavern.economy.FoodRequest request) {
+            return new ServiceResult(request, false);
+        }
+        
+        /** Customer not ready - do nothing (allow other interactions) */
+        public static ServiceResult ignored() {
+            return new ServiceResult(null, false);
+        }
+        
+        public boolean shouldShowFeedback() { return request != null; }
+        public boolean isSuccess() { return success; }
+        public maxitoson.tavernkeeper.tavern.economy.FoodRequest getRequest() { return request; }
+    }
+    
     public CustomerManager(TavernContext tavern) {
         this.tavern = tavern;
     }
@@ -306,6 +339,57 @@ public class CustomerManager {
      */
     public void unregisterCustomer(UUID customerId) {
         activeCustomers.remove(customerId);
+    }
+    
+    // ========== Customer Service ==========
+    
+    /**
+     * Handle player serving a customer.
+     * This is the main entry point for player-customer interactions.
+     * Returns a ServiceResult for UI layer to interpret.
+     * 
+     * @param player The player serving the customer
+     * @param customer The customer being served
+     * @param heldItem The item the player is holding
+     * @return ServiceResult with outcome details
+     */
+    public ServiceResult handlePlayerServe(net.minecraft.world.entity.player.Player player, CustomerEntity customer, net.minecraft.world.item.ItemStack heldItem) {
+        // Check if customer is waiting for service
+        if (customer.getCustomerState() != maxitoson.tavernkeeper.entities.ai.CustomerState.WAITING_SERVICE) {
+            return ServiceResult.ignored();
+        }
+        
+        // Get customer's food request
+        maxitoson.tavernkeeper.tavern.economy.FoodRequest request = customer.getFoodRequest();
+        if (request == null) {
+            com.mojang.logging.LogUtils.getLogger().warn("Customer {} is waiting for service but has no food request!", customer.getId());
+            return ServiceResult.ignored();
+        }
+        
+        // Check if player has the right food
+        if (!request.isSatisfiedBy(heldItem)) {
+            return ServiceResult.wrongFood(request);
+        }
+        
+        // ===== SUCCESS PATH =====
+        
+        // Remove food from player
+        heldItem.shrink(request.getRequestedAmount());
+        
+        // Give player the payment (full coin breakdown) via event
+        // WalletHandler will add to wallet or fall back to inventory
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+            new maxitoson.tavernkeeper.events.CustomerPaymentEvent(player, customer, request)
+        );
+        
+        // Customer received food - transition to next state
+        customer.setCustomerState(maxitoson.tavernkeeper.entities.ai.CustomerState.FINDING_SEAT);
+        customer.setFoodRequest(null);
+        
+        com.mojang.logging.LogUtils.getLogger().info("Player {} served customer {} with {} and received {}", 
+            player.getName().getString(), customer.getId(), request.getDisplayName(), request.getPrice().getDisplayName());
+        
+        return ServiceResult.success(request);
     }
     
     // ========== Persistence ==========

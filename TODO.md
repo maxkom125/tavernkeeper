@@ -1,5 +1,6 @@
 ### High Priority (Next Focus)
 - [x] Add tavern open/close mechanic
+- [x] **Tavern Ownership System** - First player to create area becomes owner
 - [ ] **Economy System**
   - [x] Create internal money (Coins: Copper -> Netherite)
   - [x] Wallet: auto-pickup, auto-convert (100:1), manual extract

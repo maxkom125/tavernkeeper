@@ -2,6 +2,9 @@ package maxitoson.tavernkeeper.tavern;
 
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.areas.AreaType;
+import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.network.NetworkHandler;
+import maxitoson.tavernkeeper.network.SyncAreasPacket;
 import maxitoson.tavernkeeper.tavern.managers.CustomerManager;
 import maxitoson.tavernkeeper.tavern.managers.DiningManager;
 import maxitoson.tavernkeeper.tavern.managers.EconomyManager;
@@ -40,6 +43,10 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     private final CustomerManager customerManager;
     private final EconomyManager economyManager;
     private ServerLevel level;
+    
+    // Tavern ownership (set when first area is created)
+    private UUID ownerUUID = null;
+    private String ownerName = null;
     
     // Tavern open/closed state
     private boolean manuallyOpen = true;  // Default to open
@@ -87,6 +94,48 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         return tavern;
     }
     
+    // ========== Owner Management ==========
+    
+    /**
+     * Set the tavern owner (called when first area is created)
+     */
+    public void setOwner(UUID ownerUUID, String ownerName) {
+        if (this.ownerUUID == null) {
+            this.ownerUUID = ownerUUID;
+            this.ownerName = ownerName;
+            setDirty();
+            LOGGER.info("Tavern owner set to {} ({})", ownerName, ownerUUID);
+        }
+    }
+    
+    /**
+     * Get the tavern owner UUID
+     */
+    public UUID getOwnerUUID() {
+        return ownerUUID;
+    }
+    
+    /**
+     * Get the tavern owner name
+     */
+    public String getOwnerName() {
+        return ownerName;
+    }
+    
+    /**
+     * Check if a player is the tavern owner
+     */
+    public boolean isOwner(UUID playerUUID) {
+        return ownerUUID != null && ownerUUID.equals(playerUUID);
+    }
+    
+    /**
+     * Check if tavern has an owner
+     */
+    public boolean hasOwner() {
+        return ownerUUID != null;
+    }
+    
     // ========== Public API: Area Management ==========
     
     /**
@@ -120,27 +169,186 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     }
     
     /**
-     * Create an area of specified type
+     * Create an area of specified type with auto-generated name.
+     * Automatically assigns ownership to the player if this is the first area.
+     * 
+     * @param type The area type
+     * @param minPos Minimum corner position
+     * @param maxPos Maximum corner position
+     * @param player The player creating the area
+     * @return CreationResult containing the created area and ownership info
      */
-    public BaseSpace createArea(String name, AreaType type, BlockPos minPos, BlockPos maxPos) {
-        return switch (type) {
+    public CreationResult createArea(AreaType type, BlockPos minPos, BlockPos maxPos, net.minecraft.world.entity.player.Player player) {
+        // Check if player will become owner
+        boolean becameOwner = !hasOwner();
+        
+        // Claim ownership if this is the first area
+        if (becameOwner) {
+            setOwner(player.getUUID(), player.getName().getString());
+        }
+        
+        // Generate auto-name
+        int nextNumber = getNextCounter(type);
+        String name = "#" + nextNumber;
+        
+        // Create the area
+        BaseSpace space = switch (type) {
             case DINING -> createDiningArea(name, minPos, maxPos);
             case SLEEPING -> createSleepingArea(name, minPos, maxPos);
             case SERVICE -> createServiceArea(name, minPos, maxPos);
         };
+        
+        return new CreationResult(space.getArea(), becameOwner);
     }
     
     /**
-     * Delete an area by ID
+     * Result of area creation operation.
+     * Contains information about the created area and ownership changes.
      */
-    public boolean deleteArea(UUID id) {
+    public static class CreationResult {
+        private final TavernArea createdArea;
+        private final boolean becameOwner;
+        
+        public CreationResult(TavernArea createdArea, boolean becameOwner) {
+            this.createdArea = createdArea;
+            this.becameOwner = becameOwner;
+        }
+        
+        public TavernArea getCreatedArea() {
+            return createdArea;
+        }
+        
+        public boolean becameOwner() {
+            return becameOwner;
+        }
+    }
+    
+    /**
+     * Delete an area by ID and return information about what changed.
+     * Clears tavern owner if this was the last area.
+     * 
+     * @param id The UUID of the area to delete
+     * @return DeletionResult containing deletion info, or null if area not found
+     */
+    public DeletionResult deleteArea(UUID id) {
+        // Find the area before deletion to get its info
+        BaseSpace spaceToDelete = getSpace(id);
+        if (spaceToDelete == null) {
+            return null;
+        }
+        
+        TavernArea area = spaceToDelete.getArea();
+        boolean wasLastArea = getAllSpaces().size() == 1;
+        
+        // Perform deletion
         boolean removed = diningManager.removeSpace(id) || 
                           sleepingManager.removeSpace(id) || 
                           serviceManager.removeSpace(id);
+        
         if (removed) {
+            // Check if this was the last area and clear owner
+            if (getAllSpaces().isEmpty()) {
+                clearOwner();
+            }
+            setDirty();
+            
+            return new DeletionResult(area, wasLastArea && !hasOwner());
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Sync all areas to connected clients.
+     * UI layers should call this after area modifications.
+     */
+    public void syncAreasToAllClients() {
+        java.util.List<TavernArea> areas = getAllSpaces().stream()
+            .map(BaseSpace::getArea)
+            .toList();
+        NetworkHandler.sendToAllPlayers(new SyncAreasPacket(areas));
+    }
+    
+    /**
+     * Result of area deletion operation.
+     * Contains all information UI layers need for notifications.
+     */
+    public static class DeletionResult {
+        private final TavernArea deletedArea;
+        private final boolean ownershipLost;
+        
+        public DeletionResult(TavernArea deletedArea, boolean ownershipLost) {
+            this.deletedArea = deletedArea;
+            this.ownershipLost = ownershipLost;
+        }
+        
+        public TavernArea getDeletedArea() {
+            return deletedArea;
+        }
+        
+        public boolean wasOwnershipLost() {
+            return ownershipLost;
+        }
+    }
+    
+    /**
+     * Result object for tavern sign setting
+     */
+    public static class SignSetResult {
+        private final boolean alreadySet;
+        private final boolean destroyed;
+        
+        public SignSetResult(boolean alreadySet, boolean destroyed) {
+            this.alreadySet = alreadySet;
+            this.destroyed = destroyed;
+        }
+        
+        public boolean wasAlreadySet() {
+            return alreadySet;
+        }
+        
+        public boolean wasOldSignDestroyed() {
+            return destroyed;
+        }
+    }
+    
+    /**
+     * Result object for toggling tavern open/closed
+     */
+    public static class ToggleResult {
+        private final boolean nowOpen;
+        private final boolean tavernReady;
+        private final java.util.List<String> issues;
+        
+        public ToggleResult(boolean nowOpen, boolean tavernReady, java.util.List<String> issues) {
+            this.nowOpen = nowOpen;
+            this.tavernReady = tavernReady;
+            this.issues = issues;
+        }
+        
+        public boolean isNowOpen() {
+            return nowOpen;
+        }
+        
+        public boolean isTavernReady() {
+            return tavernReady;
+        }
+        
+        public java.util.List<String> getIssues() {
+            return issues;
+        }
+    }
+    
+    /**
+     * Clear the tavern owner (e.g., when last area is deleted)
+     */
+    private void clearOwner() {
+        if (ownerUUID != null) {
+            LOGGER.info("Clearing tavern owner {} ({})", ownerName, ownerUUID);
+            ownerUUID = null;
+            ownerName = null;
             setDirty();
         }
-        return removed;
     }
     
     /**
@@ -252,23 +460,20 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
      * @param pos The position of the new tavern sign
      * @param player The player setting the sign (for feedback), can be null
      */
-    public void setTavernSign(BlockPos pos, net.minecraft.world.entity.player.Player player) {
+    public SignSetResult setTavernSign(BlockPos pos) {
         // Check if already the tavern sign
         if (tavernSignPos != null && tavernSignPos.equals(pos)) {
-            if (player != null) {
-                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "§6[Tavern Keeper] §rThis is already your tavern sign!"
-                ));
-            }
-            return;
+            return new SignSetResult(true, false);
         }
         
         // Destroy old sign if it exists at a different position
+        boolean destroyedOld = false;
         if (tavernSignPos != null && level != null) {
             net.minecraft.world.level.block.state.BlockState oldState = level.getBlockState(tavernSignPos);
             if (oldState.getBlock() instanceof net.minecraft.world.level.block.SignBlock) {
                 level.destroyBlock(tavernSignPos, true); // true = drop items
                 LOGGER.info("Destroyed old tavern sign at {}", tavernSignPos);
+                destroyedOld = true;
             }
         }
         
@@ -277,63 +482,37 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         updateSignText();
         setDirty();
         
-        // Provide feedback to player
-        if (player != null) {
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§6[Tavern Keeper] §rThis sign is now your tavern sign! Right-click to toggle open/closed."
-            ));
-            player.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
-        }
-        
         LOGGER.info("Set tavern sign at {}", pos);
+        return new SignSetResult(false, destroyedOld);
     }
     
     /**
      * Toggle tavern open/closed state
      * Called when player clicks on the tavern sign
+     * Returns a ToggleResult for UI layer to interpret
      * 
-     * @param player The player toggling the state (for feedback)
+     * @return ToggleResult with outcome details
      */
-    public void toggleOpenClosed(net.minecraft.world.entity.player.Player player) {
+    public ToggleResult toggleOpenClosed() {
         this.manuallyOpen = !this.manuallyOpen;
         updateSignText();
         setDirty();
         
-        // Provide feedback to player with detailed status
-        if (manuallyOpen) {
-            // Sign says OPEN, but check if tavern is actually ready for business
-            if (isOpen()) {
-                player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("§6[Tavern Keeper] §rTavern is now §aOPEN"),
-                    true
-                );
-            } else {
-                // Sign is OPEN but missing requirements
-                StringBuilder message = new StringBuilder("§6[Tavern Keeper] §rSign is §aOPEN§r but tavern not ready: ");
-                java.util.List<String> issues = new java.util.ArrayList<>();
-                
-                if (getAllSpaces().isEmpty()) {
-                    issues.add("§cNo areas defined");
-                }
-                if (serviceManager.getTotalLecternCount() == 0) {
-                    issues.add("§cNo lecterns in service areas");
-                }
-                
-                message.append(String.join(", ", issues));
-                player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal(message.toString()),
-                    true
-                );
+        // Determine tavern status and issues
+        boolean tavernReady = isOpen();
+        java.util.List<String> issues = new java.util.ArrayList<>();
+        
+        if (manuallyOpen && !tavernReady) {
+            // Sign is OPEN but missing requirements
+            if (getAllSpaces().isEmpty()) {
+                issues.add("No areas defined");
             }
-        } else {
-            // Sign says CLOSED
-            player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("§6[Tavern Keeper] §rTavern is now §cCLOSED"),
-                true
-            );
+            if (serviceManager.getTotalLecternCount() == 0) {
+                issues.add("No lecterns in service areas");
+            }
         }
         
-        player.playSound(net.minecraft.sounds.SoundEvents.WOODEN_DOOR_CLOSE, 1.0F, 1.0F);
+        return new ToggleResult(manuallyOpen, tavernReady, issues);
     }
     
     /**
@@ -419,6 +598,33 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         return allLecterns.get(new java.util.Random().nextInt(allLecterns.size()));
     }
     
+    /**
+     * Handle player serving a customer with food.
+     * Delegates to CustomerManager for business logic.
+     * 
+     * @param player The player serving the customer
+     * @param customer The customer being served
+     * @param heldItem The item the player is holding
+     * @return ServiceResult with outcome details for UI layer
+     */
+    public maxitoson.tavernkeeper.tavern.managers.CustomerManager.ServiceResult handlePlayerServe(
+            net.minecraft.world.entity.player.Player player,
+            maxitoson.tavernkeeper.entities.CustomerEntity customer,
+            net.minecraft.world.item.ItemStack heldItem) {
+        return customerManager.handlePlayerServe(player, customer, heldItem);
+    }
+    
+    /**
+     * Create a food request for a customer.
+     * Delegates to EconomyManager.
+     * Used by customer AI when they arrive at a lectern.
+     * 
+     * @return A randomly generated food request
+     */
+    public maxitoson.tavernkeeper.tavern.economy.FoodRequest createFoodRequest() {
+        return economyManager.createFoodRequest();
+    }
+    
     // ========== Tavern Queries for AI Behaviors ==========
     
     /**
@@ -487,6 +693,12 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         serviceManager.save(tag, registries);
         customerManager.save(tag, registries);
         
+        // Save tavern owner
+        if (ownerUUID != null) {
+            tag.putUUID("ownerUUID", ownerUUID);
+            tag.putString("ownerName", ownerName);
+        }
+        
         // Save tavern open/closed state
         tag.putBoolean("manuallyOpen", manuallyOpen);
         
@@ -516,6 +728,13 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
             sleepingManager.load(loadedData, level, registries);
             serviceManager.load(loadedData, level, registries);
             customerManager.load(loadedData, level, registries);
+            
+            // Load tavern owner
+            if (loadedData.contains("ownerUUID")) {
+                ownerUUID = loadedData.getUUID("ownerUUID");
+                ownerName = loadedData.getString("ownerName");
+                LOGGER.info("Loaded tavern owner: {} ({})", ownerName, ownerUUID);
+            }
             
             // Load tavern open/closed state
             if (loadedData.contains("manuallyOpen")) {
