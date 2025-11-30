@@ -25,8 +25,9 @@ public abstract class BaseSpace {
     /**
      * Scan the area and recognize all furniture
      * Each space type implements its own furniture recognition logic
+     * @return ScanResult specific to the space type, or null if no special result
      */
-    public abstract void scanForFurniture();
+    public abstract Object scanForFurniture();
 
     /**
      * Handle a block update at a specific position

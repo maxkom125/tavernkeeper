@@ -23,15 +23,16 @@ public class EconomyManager {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Random random = new Random();
     
-    public EconomyManager(TavernContext tavern) {
-        // Future: Store tavern reference for querying available menu items, etc.
-    }
+    // Upgrade-based multiplier (set by upgrade system)
+    private float paymentMultiplier;
+    
+    public EconomyManager(TavernContext tavern) {}
     
     /**
      * Generate a food request for a new customer with smart pricing
      * Currently uses carrots only, but formula is ready for expansion
      * 
-     * Price formula: food_quality * amount
+     * Price formula: (food_quality * amount) * payment_multiplier
      * Amount: Random from 1 to max_amount
      * Max amount decreases linearly with food quality (saturation + nutrition):
      * - Melon Slice (quality 3.2): max 10
@@ -61,24 +62,34 @@ public class EconomyManager {
         // Random amount from 1 to maxAmount
         int amount = 1 + random.nextInt(maxAmount);
         
-        // Calculate price: (nutrition + saturation) * amount
-        int priceAmount = Math.max(1, (int) Math.ceil(totalQuality * amount));
-        Price price = new Price(TavernKeeperMod.COPPER_COIN.get(), priceAmount);
+        // Calculate base price: (nutrition + saturation) * amount
+        int basePriceAmount = Math.max(1, (int) Math.ceil(totalQuality * amount));
+        
+        // Apply payment multiplier from upgrades
+        int finalPriceAmount = (int)(basePriceAmount * this.paymentMultiplier);
+        
+        Price price = new Price(TavernKeeperMod.COPPER_COIN.get(), finalPriceAmount);
         
         FoodRequest request = new FoodRequest(foodItem, amount, price);
-        LOGGER.debug("Created food request: {} for {} (quality: {}, maxAmount: {})", 
-            request.getDisplayName(), price.getDisplayName(), totalQuality, maxAmount);
+        LOGGER.debug("Created food request: {} for {} (base: {}, mult: {}x)", 
+            request.getDisplayName(), price.getDisplayName(), basePriceAmount, this.paymentMultiplier);
         return request;
     }
     
+    // ========== Upgrade System ==========
+    
     /**
-     * Process a successful sale
-     * (Future) Could track income, statistics, etc.
+     * Set payment multiplier (called by upgrade system)
      */
-    public void recordSale(FoodRequest request) {
-        LOGGER.info("Tavern sale: {} for {}", 
-            request.getDisplayName(), request.getPrice().getDisplayName());
-        // TODO: Track total income, best-selling items, etc.
+    public void setPaymentMultiplier(float multiplier) {
+        this.paymentMultiplier = multiplier;
+    }
+    
+    /**
+     * Get current payment multiplier (for external queries)
+     */
+    public float getPaymentMultiplierValue() {
+        return paymentMultiplier;
     }
 }
 

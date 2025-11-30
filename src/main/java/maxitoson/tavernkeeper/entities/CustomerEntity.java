@@ -6,6 +6,7 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import maxitoson.tavernkeeper.entities.ai.behavior.CustomerGoalPackages;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
+import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -42,7 +43,7 @@ public class CustomerEntity extends AbstractVillager {
     private CustomerState customerState = CustomerState.FINDING_QUEUE;
     private CustomerState stateBeforePanic = null;
     private net.minecraft.core.BlockPos targetPosition = null; // Target position (lectern or chair)
-    private maxitoson.tavernkeeper.tavern.economy.FoodRequest foodRequest = null; // What food customer wants
+    private FoodRequest foodRequest = null; // What food customer wants
     private net.minecraft.core.BlockPos spawnPosition = null; // Where customer spawned (for returning when leaving)
     
     // Brain configuration - similar to Villager (line 131-132)
@@ -191,11 +192,11 @@ public class CustomerEntity extends AbstractVillager {
     }
     
     // Food request management
-    public maxitoson.tavernkeeper.tavern.economy.FoodRequest getFoodRequest() {
+    public FoodRequest getFoodRequest() {
         return foodRequest;
     }
     
-    public void setFoodRequest(maxitoson.tavernkeeper.tavern.economy.FoodRequest request) {
+    public void setFoodRequest(FoodRequest request) {
         this.foodRequest = request;
     }
     

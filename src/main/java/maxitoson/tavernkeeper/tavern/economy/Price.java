@@ -25,6 +25,13 @@ public class Price {
     }
     
     /**
+     * Create a price directly from copper value
+     */
+    public Price(int copperValue) {
+        this.copperValue = copperValue;
+    }
+    
+    /**
      * Get the copper equivalent value
      */
     public int getCopperValue() {

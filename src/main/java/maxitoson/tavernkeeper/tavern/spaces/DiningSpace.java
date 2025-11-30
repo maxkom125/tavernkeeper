@@ -36,15 +36,46 @@ public class DiningSpace extends BaseSpace {
     }
     
     /**
+     * Result of scanning for furniture in a dining space
+     */
+    public static class ScanResult {
+        private final int tablesFound;
+        private final int tablesRejected;
+        private final int chairsFound;
+        private final int chairsRejected;
+        private final int validChairs;
+        
+        public ScanResult(int tablesFound, int tablesRejected, int chairsFound, int chairsRejected, int validChairs) {
+            this.tablesFound = tablesFound;
+            this.tablesRejected = tablesRejected;
+            this.chairsFound = chairsFound;
+            this.chairsRejected = chairsRejected;
+            this.validChairs = validChairs;
+        }
+        
+        public int getTablesFound() { return tablesFound; }
+        public int getTablesRejected() { return tablesRejected; }
+        public int getChairsFound() { return chairsFound; }
+        public int getChairsRejected() { return chairsRejected; }
+        public int getValidChairs() { return validChairs; }
+        public boolean hadRejectedTables() { return tablesRejected > 0; }
+        public boolean hadRejectedChairs() { return chairsRejected > 0; }
+    }
+    
+    /**
      * Scan the area and recognize all dining furniture
      */
     @Override
-    public void scanForFurniture() {
+    public ScanResult scanForFurniture() {
         tables.clear();
         chairs.clear();
+        int rejectedTables = 0;
+        int rejectedChairs = 0;
         
         Level level = area.getLevel();
-        if (level == null) return;
+        if (level == null) return new ScanResult(0, 0, 0, 0, 0);
+        
+        DiningManagerContext diningManager = (DiningManagerContext) manager;
         
         // Iterate through all blocks in the area
         BlockPos minPos = area.getMinPos();
@@ -53,18 +84,47 @@ public class DiningSpace extends BaseSpace {
         for (BlockPos pos : BlockPos.betweenClosed(minPos, maxPos)) {
             BlockState state = level.getBlockState(pos);
             Block block = state.getBlock();
+            Object furniture = null;
             
-            // Check if it's a stair block
+            // Check if block is a furniture block
             if (block instanceof StairBlock) {
-                recognizeStair(pos, state);
+                furniture = recognizeStair(pos, state);
+            }
+            // TODO: Add more furniture blocks here
+
+            if (furniture == null) {
+                continue;
+            }
+
+            // Check if it's a table or chair
+            if (furniture instanceof Table table) {
+                // It's a table - check if we can add it
+                if (diningManager.canAddTable()) {
+                    tables.add(table);
+                    LOGGER.debug("Added table at {}", pos);
+                } else {
+                    rejectedTables++;
+                    LOGGER.debug("Rejected table at {} - limit reached", pos);
+                }
+            } else if (furniture instanceof Chair chair) {
+                // It's a chair - check if we can add it
+                if (diningManager.canAddChair()) {
+                    chairs.add(chair);
+                    LOGGER.debug("Added chair at {} (will validate)", pos);
+                } else {
+                    rejectedChairs++;
+                    LOGGER.debug("Rejected chair at {} - limit reached", pos);
+                }
             }
         }
         
         // After scanning all blocks, validate chairs
         validateChairs();
 
-        LOGGER.info("Scanned DiningSpace: Found {} tables and {} chairs ({} valid)", 
-            tables.size(), chairs.size(), getValidChairCount());
+        LOGGER.info("Scanned DiningSpace: Found {} tables ({} rejected), {} chairs ({} rejected, {} valid)", 
+            tables.size(), rejectedTables, chairs.size(), rejectedChairs, getValidChairCount());
+            
+        return new ScanResult(tables.size(), rejectedTables, chairs.size(), rejectedChairs, getValidChairCount());
     }
 
     @Override
@@ -82,9 +142,18 @@ public class DiningSpace extends BaseSpace {
             LOGGER.debug("Removed chair at {}", pos);
         }
         
-        // If it's a stair block, recognize it
+        // If it's a stair block, recognize and add it
         if (state.getBlock() instanceof StairBlock) {
-            recognizeStair(pos, state);
+            Object furniture = recognizeStair(pos, state);
+            DiningManagerContext diningManager = (DiningManagerContext) manager;
+            
+            if (furniture instanceof Table table && diningManager.canAddTable()) {
+                tables.add(table);
+                LOGGER.debug("Added table at {}", pos);
+            } else if (furniture instanceof Chair chair && diningManager.canAddChair()) {
+                chairs.add(chair);
+                LOGGER.debug("Added chair at {}", pos);
+            }
         }
         
         // Re-validate all chairs since a table might have been placed/removed
@@ -92,21 +161,22 @@ public class DiningSpace extends BaseSpace {
     }
     
     /**
-     * Recognize a stair as either a table (upside-down) or chair (normal)
+     * Recognize a stair block and return the furniture object (Table or Chair)
+     * @return Table if upside-down stairs, Chair if normal stairs, null otherwise
      */
-    private void recognizeStair(BlockPos pos, BlockState state) {
-        if (state.hasProperty(StairBlock.HALF)) {
-            Half half = state.getValue(StairBlock.HALF);
-            
-            if (half == Half.TOP) {
-                // Upside-down stairs = Table
-                tables.add(new Table(pos, state));
-                LOGGER.debug("Added table at {}", pos);
-            } else {
-                // Normal stairs = Chair
-                chairs.add(new Chair(pos, state));
-                LOGGER.debug("Added chair at {} (will validate)", pos);
-            }
+    private Object recognizeStair(BlockPos pos, BlockState state) {
+        if (!state.hasProperty(StairBlock.HALF)) {
+            return null;
+        }
+        
+        Half half = state.getValue(StairBlock.HALF);
+        
+        if (half == Half.TOP) {
+            // Upside-down stairs = Table
+            return new Table(pos, state);
+        } else {
+            // Normal stairs = Chair
+            return new Chair(pos, state);
         }
     }
     

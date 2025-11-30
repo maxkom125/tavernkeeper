@@ -2,6 +2,7 @@ package maxitoson.tavernkeeper.tavern.managers;
 
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.tavern.furniture.Chair;
 import maxitoson.tavernkeeper.tavern.spaces.DiningManagerContext;
 import maxitoson.tavernkeeper.tavern.spaces.DiningSpace;
 import net.minecraft.core.BlockPos;
@@ -22,6 +23,10 @@ public class DiningManager extends BaseManager<DiningSpace> implements DiningMan
     
     // Track which customer is occupying which chair
     private final Map<BlockPos, UUID> occupiedChairs = new HashMap<>();
+    
+    // Upgrade-based limits (set by upgrade system)
+    private int maxTables;
+    private int maxChairs;
     
     public DiningManager(TavernContext tavern) {
         super(tavern);
@@ -55,6 +60,54 @@ public class DiningManager extends BaseManager<DiningSpace> implements DiningMan
      */
     public int getTotalChairCount() {
         return spaces.values().stream().mapToInt(DiningSpace::getChairCount).sum();
+    }
+    
+    // ========== Upgrade System ==========
+    
+    /**
+     * Get the current maximum number of tables allowed
+     */
+    public int getMaxTables() {
+        return maxTables;
+    }
+    
+    /**
+     * Set the maximum number of tables (called by upgrade system)
+     */
+    public void setMaxTables(int maxTables) {
+        this.maxTables = maxTables;
+    }
+    
+    /**
+     * Get the current maximum number of chairs allowed
+     */
+    public int getMaxChairs() {
+        return maxChairs;
+    }
+    
+    /**
+     * Set the maximum number of chairs (called by upgrade system)
+     */
+    public void setMaxChairs(int maxChairs) {
+        this.maxChairs = maxChairs;
+    }
+    
+    /**
+     * Check if more tables can be added based on current upgrade level
+     * Implements DiningManagerContext interface
+     */
+    @Override
+    public boolean canAddTable() {
+        return getTotalTableCount() < maxTables;
+    }
+    
+    /**
+     * Check if more chairs can be added based on current upgrade level
+     * Implements DiningManagerContext interface
+     */
+    @Override
+    public boolean canAddChair() {
+        return getTotalChairCount() < maxChairs;
     }
     
     /**
@@ -94,11 +147,11 @@ public class DiningManager extends BaseManager<DiningSpace> implements DiningMan
      * Find nearest available chair for a customer
      * Manager knows how to query its own spaces
      */
-    public java.util.Optional<maxitoson.tavernkeeper.tavern.furniture.Chair> findNearestAvailableChair(
+    public java.util.Optional<Chair> findNearestAvailableChair(
             BlockPos from, double maxDistance) {
         return spaces.values().stream()
             .flatMap(space -> space.getChairs().stream())
-            .filter(maxitoson.tavernkeeper.tavern.furniture.Chair::isValid)
+            .filter(Chair::isValid)
             .filter(chair -> isChairAvailable(chair.getPosition()))
             .filter(chair -> {
                 double distSq = chair.getPosition().distSqr(from);

@@ -1,19 +1,18 @@
 package maxitoson.tavernkeeper.events;
 
-import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.items.MarkingCane;
 import maxitoson.tavernkeeper.tavern.Tavern;
+import maxitoson.tavernkeeper.tavern.Tavern.ToggleResult;
+import maxitoson.tavernkeeper.tavern.managers.CustomerManager.ServiceResult;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import org.slf4j.Logger;
 
 /**
  * Handles player interactions with blocks, entities, and items.
@@ -64,7 +63,7 @@ public class PlayerInteractionHandler {
         
         // Route 2: Clicking on tavern sign (without marking cane) → delegate to Tavern
         if (tavern.isTavernSign(pos)) {
-            maxitoson.tavernkeeper.tavern.Tavern.ToggleResult result = tavern.toggleOpenClosed();
+            ToggleResult result = tavern.toggleOpenClosed();
             
             // UI layer interprets result and displays feedback
             if (result.isNowOpen()) {
@@ -126,8 +125,7 @@ public class PlayerInteractionHandler {
             
             // Delegate to Tavern for all business logic
             Tavern tavern = Tavern.get(serverLevel);
-            maxitoson.tavernkeeper.tavern.managers.CustomerManager.ServiceResult result = 
-                tavern.handlePlayerServe(player, customer, heldItem);
+            ServiceResult result = tavern.handlePlayerServe(player, customer, heldItem);
             
             // UI layer interprets result and displays appropriate feedback
             if (result.shouldShowFeedback()) {

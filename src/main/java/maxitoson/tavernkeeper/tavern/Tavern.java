@@ -3,21 +3,32 @@ package maxitoson.tavernkeeper.tavern;
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.network.NetworkHandler;
 import maxitoson.tavernkeeper.network.SyncAreasPacket;
+import maxitoson.tavernkeeper.tavern.managers.BaseManager;
 import maxitoson.tavernkeeper.tavern.managers.CustomerManager;
 import maxitoson.tavernkeeper.tavern.managers.DiningManager;
 import maxitoson.tavernkeeper.tavern.managers.EconomyManager;
 import maxitoson.tavernkeeper.tavern.managers.ServiceManager;
 import maxitoson.tavernkeeper.tavern.managers.SleepingManager;
+import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.managers.UpgradeManager;
+import maxitoson.tavernkeeper.tavern.managers.CustomerManager.ServiceResult;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
 import maxitoson.tavernkeeper.tavern.spaces.DiningSpace;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceSpace;
 import maxitoson.tavernkeeper.tavern.spaces.SleepingSpace;
+import maxitoson.tavernkeeper.tavern.TavernStatistics;
+import maxitoson.tavernkeeper.tavern.furniture.Chair;
+import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
+import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
+import maxitoson.tavernkeeper.tavern.upgrades.TavernUpgrade;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.AABB;
 import org.slf4j.Logger;
@@ -33,7 +44,7 @@ import java.util.stream.Stream;
  * 
  * Implements TavernContext to provide controlled access to managers
  */
-public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.managers.TavernContext {
+public class Tavern extends SavedData implements TavernContext {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String DATA_NAME = "tavernkeeper_tavern";
     
@@ -42,6 +53,8 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     private final ServiceManager serviceManager;
     private final CustomerManager customerManager;
     private final EconomyManager economyManager;
+    private final UpgradeManager upgradeManager;
+    private final TavernStatistics statistics;
     private ServerLevel level;
     
     // Tavern ownership (set when first area is created)
@@ -53,11 +66,16 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     private BlockPos tavernSignPos = null;  // Position of the tavern sign
     
     public Tavern() {
+        this.statistics = new TavernStatistics();
+        this.upgradeManager = new UpgradeManager(this);
         this.diningManager = new DiningManager(this);
         this.sleepingManager = new SleepingManager(this);
         this.serviceManager = new ServiceManager(this);
         this.customerManager = new CustomerManager(this);
         this.economyManager = new EconomyManager(this);
+        
+        // Apply default upgrade to all managers (single source of truth)
+        applyCurrentUpgradeToAllManagers();
     }
     
     public void setLevel(ServerLevel level) {
@@ -88,7 +106,7 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
             tavern.setLevel(level);
             // Trigger deferred loading if needed
             if (tavern.loadedData != null) {
-                tavern.loadSpacesIfNeeded(level.registryAccess());
+                tavern.loadTavernData(level.registryAccess());
             }
         }
         return tavern;
@@ -141,31 +159,40 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     /**
      * Create a new dining area
      */
-    public DiningSpace createDiningArea(String name, BlockPos minPos, BlockPos maxPos) {
-        DiningSpace space = diningManager.addArea(name, minPos, maxPos, level);
-        space.scanForFurniture();
+    /**
+     * Create a new dining area and scan for furniture
+     * @return AddSpaceResult with area and scan information
+     */
+    public BaseManager.AddSpaceResult createDiningArea(String name, BlockPos minPos, BlockPos maxPos) {
+        BaseManager.AddSpaceResult result = diningManager.addSpace(name, minPos, maxPos, level);
         setDirty();
-        return space;
+        return result;
     }
     
     /**
      * Create a new sleeping area
      */
-    public SleepingSpace createSleepingArea(String name, BlockPos minPos, BlockPos maxPos) {
-        SleepingSpace space = sleepingManager.addArea(name, minPos, maxPos, level);
-        space.scanForFurniture();
+    /**
+     * Create a new sleeping area and scan for furniture
+     * @return AddSpaceResult with area and scan information
+     */
+    public BaseManager.AddSpaceResult createSleepingArea(String name, BlockPos minPos, BlockPos maxPos) {
+        BaseManager.AddSpaceResult result = sleepingManager.addSpace(name, minPos, maxPos, level);
         setDirty();
-        return space;
+        return result;
     }
 
     /**
      * Create a new service area
      */
-    public ServiceSpace createServiceArea(String name, BlockPos minPos, BlockPos maxPos) {
-        ServiceSpace space = serviceManager.addArea(name, minPos, maxPos, level);
-        space.scanForFurniture();
+    /**
+     * Create a new service area and scan for furniture
+     * @return AddSpaceResult with area and scan information
+     */
+    public BaseManager.AddSpaceResult createServiceArea(String name, BlockPos minPos, BlockPos maxPos) {
+        BaseManager.AddSpaceResult result = serviceManager.addSpace(name, minPos, maxPos, level);
         setDirty();
-        return space;
+        return result;
     }
     
     /**
@@ -178,7 +205,7 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
      * @param player The player creating the area
      * @return CreationResult containing the created area and ownership info
      */
-    public CreationResult createArea(AreaType type, BlockPos minPos, BlockPos maxPos, net.minecraft.world.entity.player.Player player) {
+    public CreationResult createArea(AreaType type, BlockPos minPos, BlockPos maxPos, Player player) {
         // Check if player will become owner
         boolean becameOwner = !hasOwner();
         
@@ -191,14 +218,14 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         int nextNumber = getNextCounter(type);
         String name = "#" + nextNumber;
         
-        // Create the area
-        BaseSpace space = switch (type) {
+        // Create the area and get result (includes area + scan result)
+        BaseManager.AddSpaceResult addResult = switch (type) {
             case DINING -> createDiningArea(name, minPos, maxPos);
             case SLEEPING -> createSleepingArea(name, minPos, maxPos);
             case SERVICE -> createServiceArea(name, minPos, maxPos);
         };
         
-        return new CreationResult(space.getArea(), becameOwner);
+        return new CreationResult(addResult.getArea(), becameOwner, addResult.getScanResult());
     }
     
     /**
@@ -208,10 +235,12 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     public static class CreationResult {
         private final TavernArea createdArea;
         private final boolean becameOwner;
+        private final Object scanResult; // ScanResult from specific space type
         
-        public CreationResult(TavernArea createdArea, boolean becameOwner) {
+        public CreationResult(TavernArea createdArea, boolean becameOwner, Object scanResult) {
             this.createdArea = createdArea;
             this.becameOwner = becameOwner;
+            this.scanResult = scanResult;
         }
         
         public TavernArea getCreatedArea() {
@@ -220,6 +249,10 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         
         public boolean becameOwner() {
             return becameOwner;
+        }
+        
+        public Object getScanResult() {
+            return scanResult;
         }
     }
     
@@ -441,18 +474,171 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         return economyManager;
     }
     
+    public UpgradeManager getUpgradeManager() {
+        return upgradeManager;
+    }
+    
     // ========== Tavern State Queries (for CustomerManager) ==========
 
     /**
      *  Check if tavern is open for business (has service areas with lecterns AND manually open)
      * Note: Please change toggleOpenClosed if you change this method
      */
+    @Override
     public boolean isOpen() {
         return manuallyOpen 
             && serviceManager.getTotalLecternCount() > 0
             && !getAllSpaces().isEmpty();
     }
+
+    /**
+     * Get a random tavern center point (random lectern position)
+     * This provides CustomerManager with spawn center
+     */
+    @Override
+    public BlockPos getTavernCenter() {
+        List<BlockPos> allLecterns = new ArrayList<>();
+        
+        // Collect all lecterns from all service spaces
+        for (var space : serviceManager.getSpaces()) {
+            ServiceSpace serviceSpace = (ServiceSpace) space;
+            for (ServiceLectern lectern : serviceSpace.getLecterns()) {
+                allLecterns.add(lectern.getPosition());
+            }
+        }
+        
+        if (allLecterns.isEmpty()) {
+            return null;
+        }
+        
+        // Return random lectern
+        return allLecterns.get(new java.util.Random().nextInt(allLecterns.size()));
+    }
     
+    /**
+     * Handle player serving a customer with food.
+     * Delegates to CustomerManager for business logic.
+     * 
+     * @param player The player serving the customer
+     * @param customer The customer being served
+     * @param heldItem The item the player is holding
+     * @return ServiceResult with outcome details for UI layer
+     */
+    public ServiceResult handlePlayerServe(
+            net.minecraft.world.entity.player.Player player,
+            CustomerEntity customer,
+            net.minecraft.world.item.ItemStack heldItem) {
+        return customerManager.handlePlayerServe(player, customer, heldItem);
+    }
+        
+    /**
+     * Create a food request for a customer.
+     * Delegates to EconomyManager.
+     * Used by customer AI when they arrive at a lectern.
+     * 
+     * @return A randomly generated food request
+     */
+    public FoodRequest createFoodRequest() {
+        return economyManager.createFoodRequest();
+    }
+    
+    // ========== Statistics (TavernContext interface) ==========
+    
+    @Override
+    public long getTotalMoneyEarned() {
+        return statistics.getTotalMoneyEarned();
+    }
+    
+    @Override
+    public int getReputation() {
+        return statistics.getReputation();
+    }
+    
+    @Override
+    public int getTotalCustomersServed() {
+        return statistics.getTotalCustomersServed();
+    }
+    
+    @Override
+    public void recordSale(int copperAmount) {
+        // Update statistics through internal helper (ensures upgrade check)
+        modifyStatistics(() -> {
+            statistics.addMoney(copperAmount);
+            statistics.incrementCustomersServed();
+            statistics.addReputation(1);  // +1 reputation per customer served
+        });
+    }
+    
+    /**
+     * Modify statistics and automatically check for upgrades
+     * 
+     * CRITICAL: All statistics modifications MUST go through this method!
+     * Never call statistics.addX() directly - this ensures:
+     * - setDirty() is always called
+     * - Upgrade checks happen automatically
+     * - Persistence works correctly
+     * 
+     * Example usage:
+     * <pre>
+     * modifyStatistics(() -> {
+     *     statistics.addMoney(amount);
+     *     statistics.addReputation(1);
+     * });
+     * </pre>
+     * 
+     * @param modification The statistics modification to perform
+     */
+    private void modifyStatistics(Runnable modification) {
+        modification.run();
+        setDirty();
+        checkForUpgrades();
+    }
+    
+    // ========== Upgrades ==========
+        
+    /**
+     * Check if upgrades are available and apply them
+     * Called automatically after statistics changes
+     */
+    private void checkForUpgrades() {
+        if (level == null) return;
+        
+        TavernUpgrade newTavernLevel = upgradeManager.checkAndAutoUpgrade(level);
+        if (newTavernLevel != null) {
+            // Apply upgrade to all managers
+            applyCurrentUpgradeToAllManagers();
+            setDirty();
+        }
+    }
+    
+    /**
+     * Get current upgrade level
+     */
+    public TavernUpgrade getCurrentUpgrade() {
+        return upgradeManager.getCurrentUpgrade();
+    }
+    
+    /**
+     * Apply current upgrade level to all managers
+     * Called during initialization, loading, and after upgrade purchase
+     */
+    private void applyCurrentUpgradeToAllManagers() {
+        TavernUpgrade currentTavernLevel = upgradeManager.getCurrentUpgrade();
+        
+        // Apply to all managers
+        currentTavernLevel.applyToDiningManager(diningManager);
+        currentTavernLevel.applyToCustomerManager(customerManager);
+        currentTavernLevel.applyToEconomyManager(economyManager);
+        // Future: currentTavernLevel.applyToSleepingManager(sleepingManager);
+        
+        LOGGER.info("Applied upgrade {} (maxTables: {}, paymentMult: {}x, spawnMult: {}x)", 
+            currentTavernLevel.getDisplayName(), 
+            diningManager.getMaxTables(),
+            economyManager.getPaymentMultiplierValue(),
+            customerManager.getSpawnRateMultiplier());
+    }
+
+    // ========== Tavern Sign Management (Tavern Open/Closed State) ==========
     /**
      * Set tavern sign position and update its text
      * Destroys the old tavern sign if one exists
@@ -574,64 +760,14 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     public boolean isManuallyOpen() {
         return manuallyOpen;
     }
-    
-    /**
-     * Get a random tavern center point (random lectern position)
-     * This provides CustomerManager with spawn center
-     */
-    public BlockPos getTavernCenter() {
-        List<BlockPos> allLecterns = new ArrayList<>();
-        
-        // Collect all lecterns from all service spaces
-        for (var space : serviceManager.getSpaces()) {
-            ServiceSpace serviceSpace = (ServiceSpace) space;
-            for (maxitoson.tavernkeeper.tavern.furniture.ServiceLectern lectern : serviceSpace.getLecterns()) {
-                allLecterns.add(lectern.getPosition());
-            }
-        }
-        
-        if (allLecterns.isEmpty()) {
-            return null;
-        }
-        
-        // Return random lectern
-        return allLecterns.get(new java.util.Random().nextInt(allLecterns.size()));
-    }
-    
-    /**
-     * Handle player serving a customer with food.
-     * Delegates to CustomerManager for business logic.
-     * 
-     * @param player The player serving the customer
-     * @param customer The customer being served
-     * @param heldItem The item the player is holding
-     * @return ServiceResult with outcome details for UI layer
-     */
-    public maxitoson.tavernkeeper.tavern.managers.CustomerManager.ServiceResult handlePlayerServe(
-            net.minecraft.world.entity.player.Player player,
-            maxitoson.tavernkeeper.entities.CustomerEntity customer,
-            net.minecraft.world.item.ItemStack heldItem) {
-        return customerManager.handlePlayerServe(player, customer, heldItem);
-    }
-    
-    /**
-     * Create a food request for a customer.
-     * Delegates to EconomyManager.
-     * Used by customer AI when they arrive at a lectern.
-     * 
-     * @return A randomly generated food request
-     */
-    public maxitoson.tavernkeeper.tavern.economy.FoodRequest createFoodRequest() {
-        return economyManager.createFoodRequest();
-    }
-    
+
     // ========== Tavern Queries for AI Behaviors ==========
     
     /**
      * Find nearest available chair for a customer
      * Delegates to DiningManager
      */
-    public java.util.Optional<maxitoson.tavernkeeper.tavern.furniture.Chair> findNearestAvailableChair(
+    public java.util.Optional<Chair> findNearestAvailableChair(
             BlockPos from, double maxDistance) {
         return diningManager.findNearestAvailableChair(from, maxDistance);
     }
@@ -656,7 +792,7 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
      * Find nearest service lectern
      * Delegates to ServiceManager
      */
-    public java.util.Optional<maxitoson.tavernkeeper.tavern.furniture.ServiceLectern> findNearestLectern(
+    public java.util.Optional<ServiceLectern> findNearestLectern(
             BlockPos from, double maxDistance) {
         return serviceManager.findNearestLectern(from, maxDistance);
     }
@@ -693,6 +829,10 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
         serviceManager.save(tag, registries);
         customerManager.save(tag, registries);
         
+        // Save statistics and upgrades
+        statistics.save(tag);
+        upgradeManager.save(tag);
+        
         // Save tavern owner
         if (ownerUUID != null) {
             tag.putUUID("ownerUUID", ownerUUID);
@@ -720,14 +860,19 @@ public class Tavern extends SavedData implements maxitoson.tavernkeeper.tavern.m
     private CompoundTag loadedData = null;
     
     /**
-     * Load spaces after level is set (called by setLevel)
+     * Load tavern data after level is set
      */
-    private void loadSpacesIfNeeded(HolderLookup.Provider registries) {
+    private void loadTavernData(HolderLookup.Provider registries) {
         if (loadedData != null && level != null) {
             diningManager.load(loadedData, level, registries);
             sleepingManager.load(loadedData, level, registries);
             serviceManager.load(loadedData, level, registries);
             customerManager.load(loadedData, level, registries);
+            statistics.load(loadedData);
+            upgradeManager.load(loadedData);
+            
+            // Apply current upgrade to managers after loading
+            applyCurrentUpgradeToAllManagers();
             
             // Load tavern owner
             if (loadedData.contains("ownerUUID")) {

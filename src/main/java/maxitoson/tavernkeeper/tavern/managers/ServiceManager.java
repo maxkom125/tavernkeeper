@@ -2,6 +2,7 @@ package maxitoson.tavernkeeper.tavern.managers;
 
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceManagerContext;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceSpace;
 import net.minecraft.core.BlockPos;
@@ -52,7 +53,7 @@ public class ServiceManager extends BaseManager<ServiceSpace> implements Service
      * Find nearest service lectern
      * Manager knows how to query its own spaces
      */
-    public java.util.Optional<maxitoson.tavernkeeper.tavern.furniture.ServiceLectern> findNearestLectern(
+    public java.util.Optional<ServiceLectern> findNearestLectern(
             BlockPos from, double maxDistance) {
         return spaces.values().stream()
             .flatMap(space -> space.getLecterns().stream())

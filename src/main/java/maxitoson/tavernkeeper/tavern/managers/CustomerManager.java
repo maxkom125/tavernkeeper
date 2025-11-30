@@ -1,10 +1,15 @@
 package maxitoson.tavernkeeper.tavern.managers;
 
+import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
+import maxitoson.tavernkeeper.entities.ai.CustomerState;
+import maxitoson.tavernkeeper.events.CustomerPaymentEvent;
+import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -12,8 +17,11 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnPlacementType;
 import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +50,9 @@ public class CustomerManager {
     private int spawnIntervalMean = 600; // Mean spawn rate (30 seconds)
     private int spawnIntervalStd = 120; // Standard deviation (±6 seconds)
     
+    // Upgrade-based multipliers (set by upgrade system)
+    private float spawnRateMultiplier;
+    
     // Spawn attempt constants (from Raid.java)
     private static final int NUM_SPAWN_ATTEMPTS = 20; // Total attempts to find valid position
     private static final int SPAWN_SEARCH_RADIUS = 32; // Blocks from center to search
@@ -51,21 +62,21 @@ public class CustomerManager {
      * Simple: null = do nothing, non-null = show feedback
      */
     public static class ServiceResult {
-        private final maxitoson.tavernkeeper.tavern.economy.FoodRequest request;
+        private final FoodRequest request;
         private final boolean success;
         
-        private ServiceResult(maxitoson.tavernkeeper.tavern.economy.FoodRequest request, boolean success) {
+        private ServiceResult(FoodRequest request, boolean success) {
             this.request = request;
             this.success = success;
         }
         
         /** Player served correct food - show success message */
-        public static ServiceResult success(maxitoson.tavernkeeper.tavern.economy.FoodRequest request) {
+        public static ServiceResult success(FoodRequest request) {
             return new ServiceResult(request, true);
         }
         
         /** Player has wrong food - show what customer wants */
-        public static ServiceResult wrongFood(maxitoson.tavernkeeper.tavern.economy.FoodRequest request) {
+        public static ServiceResult wrongFood(FoodRequest request) {
             return new ServiceResult(request, false);
         }
         
@@ -76,7 +87,7 @@ public class CustomerManager {
         
         public boolean shouldShowFeedback() { return request != null; }
         public boolean isSuccess() { return success; }
-        public maxitoson.tavernkeeper.tavern.economy.FoodRequest getRequest() { return request; }
+        public FoodRequest getRequest() { return request; }
     }
     
     public CustomerManager(TavernContext tavern) {
@@ -224,7 +235,7 @@ public class CustomerManager {
         // Notify players
         level.getServer().getPlayerList().getPlayers().forEach(player -> {
             player.sendSystemMessage(
-                net.minecraft.network.chat.Component.literal(
+                Component.literal(
                     "§6[Tavern] §rA customer has arrived! (" + countActiveCustomers(level) + "/" + maxCustomers + ")"
                 )
             );
@@ -235,9 +246,11 @@ public class CustomerManager {
      * Reset spawn cooldown with random interval (mean ± std)
      */
     private void resetSpawnCooldown() {
-        // Gaussian distribution: mean ± std
+        // Gaussian distribution: mean ± std, adjusted by upgrade multiplier
         int variance = (int)(random.nextGaussian() * spawnIntervalStd);
-        spawnCooldownTicks = Math.max(10, spawnIntervalMean + variance);
+        int baseInterval = spawnIntervalMean + variance;
+        int adjustedInterval = (int)(baseInterval / spawnRateMultiplier);
+        spawnCooldownTicks = Math.max(10, adjustedInterval);
     }
     
     /**
@@ -249,7 +262,7 @@ public class CustomerManager {
         try {
             // Query all customer entities in the world
             return level.getEntities(
-                maxitoson.tavernkeeper.TavernKeeperMod.CUSTOMER.get(),
+                TavernKeeperMod.CUSTOMER.get(),
                 entity -> true // Count all customers
             ).size();
         } catch (Exception e) {
@@ -353,16 +366,16 @@ public class CustomerManager {
      * @param heldItem The item the player is holding
      * @return ServiceResult with outcome details
      */
-    public ServiceResult handlePlayerServe(net.minecraft.world.entity.player.Player player, CustomerEntity customer, net.minecraft.world.item.ItemStack heldItem) {
+    public ServiceResult handlePlayerServe(Player player, CustomerEntity customer, ItemStack heldItem) {
         // Check if customer is waiting for service
-        if (customer.getCustomerState() != maxitoson.tavernkeeper.entities.ai.CustomerState.WAITING_SERVICE) {
+        if (customer.getCustomerState() != CustomerState.WAITING_SERVICE) {
             return ServiceResult.ignored();
         }
         
         // Get customer's food request
-        maxitoson.tavernkeeper.tavern.economy.FoodRequest request = customer.getFoodRequest();
+        FoodRequest request = customer.getFoodRequest();
         if (request == null) {
-            com.mojang.logging.LogUtils.getLogger().warn("Customer {} is waiting for service but has no food request!", customer.getId());
+            LogUtils.getLogger().warn("Customer {} is waiting for service but has no food request!", customer.getId());
             return ServiceResult.ignored();
         }
         
@@ -376,20 +389,40 @@ public class CustomerManager {
         // Remove food from player
         heldItem.shrink(request.getRequestedAmount());
         
-        // Give player the payment (full coin breakdown) via event
+        // Give player the payment via event
         // WalletHandler will add to wallet or fall back to inventory
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
-            new maxitoson.tavernkeeper.events.CustomerPaymentEvent(player, customer, request)
+        NeoForge.EVENT_BUS.post(
+            new CustomerPaymentEvent(player, customer, request)
         );
         
+        // Record sale in tavern statistics (always executes, regardless of event)
+        tavern.recordSale(request.getPrice().getCopperValue());
+        
         // Customer received food - transition to next state
-        customer.setCustomerState(maxitoson.tavernkeeper.entities.ai.CustomerState.FINDING_SEAT);
+        customer.setCustomerState(CustomerState.FINDING_SEAT);
         customer.setFoodRequest(null);
         
-        com.mojang.logging.LogUtils.getLogger().info("Player {} served customer {} with {} and received {}", 
+        LogUtils.getLogger().info("Player {} served customer {} with {} and received {}", 
             player.getName().getString(), customer.getId(), request.getDisplayName(), request.getPrice().getDisplayName());
         
         return ServiceResult.success(request);
+    }
+    
+    // ========== Upgrade System ==========
+    
+    /**
+     * Set spawn rate multiplier (called by upgrade system)
+     * Higher values = faster spawns
+     */
+    public void setSpawnRateMultiplier(float multiplier) {
+        this.spawnRateMultiplier = multiplier;
+    }
+    
+    /**
+     * Get current spawn rate multiplier
+     */
+    public float getSpawnRateMultiplier() {
+        return spawnRateMultiplier;
     }
     
     // ========== Persistence ==========

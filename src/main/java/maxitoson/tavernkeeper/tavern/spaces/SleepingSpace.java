@@ -35,11 +35,11 @@ public class SleepingSpace extends BaseSpace {
      * Scan the area and recognize all sleeping furniture
      */
     @Override
-    public void scanForFurniture() {
+    public Object scanForFurniture() {
         beds.clear();
         
         Level level = area.getLevel();
-        if (level == null) return;
+        if (level == null) return null;
         
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
@@ -57,6 +57,7 @@ public class SleepingSpace extends BaseSpace {
             }
         }
         LOGGER.info("Scanned SleepingSpace {}: Found {} beds", area.getName(), beds.size());
+        return null;
     }
 
     @Override

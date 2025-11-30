@@ -34,12 +34,12 @@ public class ServiceSpace extends BaseSpace {
     }
     
     @Override
-    public void scanForFurniture() {
+    public Object scanForFurniture() {
         lecterns.clear();
         barrels.clear();
         
         Level level = area.getLevel();
-        if (level == null) return;
+        if (level == null) return null;
         
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
@@ -50,6 +50,7 @@ public class ServiceSpace extends BaseSpace {
         }
         
         LOGGER.info("Scanned ServiceSpace: Found {} lecterns and {} barrels", lecterns.size(), barrels.size());
+        return null;
     }
 
     @Override

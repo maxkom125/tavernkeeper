@@ -1,6 +1,7 @@
 package maxitoson.tavernkeeper.tavern.managers;
 
 import maxitoson.tavernkeeper.areas.AreaType;
+import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
 // import maxitoson.tavernkeeper.tavern.spaces.ManagerContext;
 import net.minecraft.core.BlockPos;
@@ -21,6 +22,28 @@ import java.util.*;
  * @param <T> The type of space this manager handles
  */
 public abstract class BaseManager<T extends BaseSpace> {
+    
+    /**
+     * Result of adding a space (includes area and scan results)
+     */
+    public static class AddSpaceResult {
+        private final TavernArea area;
+        private final Object scanResult;
+        
+        public AddSpaceResult(TavernArea area, Object scanResult) {
+            this.area = area;
+            this.scanResult = scanResult;
+        }
+        
+        public TavernArea getArea() {
+            return area;
+        }
+        
+        public Object getScanResult() {
+            return scanResult;
+        }
+    }
+    
     protected final TavernContext tavern;
     protected final Map<UUID, T> spaces;
     
@@ -44,9 +67,10 @@ public abstract class BaseManager<T extends BaseSpace> {
     protected abstract T createSpace(String name, BlockPos minPos, BlockPos maxPos, ServerLevel level);
     
     /**
-     * Add a new area and create corresponding space
+     * Add a new space (creates area internally, scans for furniture)
+     * @return AddSpaceResult containing area and scan results
      */
-    public T addArea(String name, BlockPos minPos, BlockPos maxPos, ServerLevel level) {
+    public AddSpaceResult addSpace(String name, BlockPos minPos, BlockPos maxPos, ServerLevel level) {
         // Ensure area is at least 3 blocks tall (for furniture detection)
         int height = maxPos.getY() - minPos.getY() + 1;
         if (height < 3) {
@@ -55,7 +79,10 @@ public abstract class BaseManager<T extends BaseSpace> {
         
         T space = createSpace(name, minPos, maxPos, level);
         spaces.put(space.getArea().getId(), space);
-        return space;
+        
+        // Scan for furniture and return result
+        Object scanResult = space.scanForFurniture();
+        return new AddSpaceResult(space.getArea(), scanResult);
     }
     
     /**

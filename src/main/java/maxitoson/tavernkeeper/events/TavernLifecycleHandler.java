@@ -3,6 +3,7 @@ package maxitoson.tavernkeeper.events;
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.areas.AreaCommand;
+import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.network.NetworkHandler;
 import maxitoson.tavernkeeper.network.SyncAreasPacket;
 import maxitoson.tavernkeeper.tavern.Tavern;
@@ -65,7 +66,7 @@ public class TavernLifecycleHandler {
             net.minecraft.server.level.ServerLevel level = serverPlayer.serverLevel();
             Tavern tavern = Tavern.get(level);
             // Convert spaces to TavernArea for network packet
-            java.util.List<maxitoson.tavernkeeper.areas.TavernArea> areas = tavern.getAllSpaces().stream()
+            java.util.List<TavernArea> areas = tavern.getAllSpaces().stream()
                 .map(space -> space.getArea())
                 .toList();
             NetworkHandler.sendToPlayer(new SyncAreasPacket(areas), serverPlayer);

@@ -28,5 +28,32 @@ public interface TavernContext {
      * Used by CustomerManager to determine where customers spawn around
      */
     BlockPos getTavernCenter();
+    
+    // ========== Statistics Queries ==========
+    
+    /**
+     * Get total money earned by the tavern (in copper coins)
+     */
+    long getTotalMoneyEarned();
+    
+    /**
+     * Get current tavern reputation
+     */
+    int getReputation();
+    
+    /**
+     * Get total customers served
+     */
+    int getTotalCustomersServed();
+    
+    // ========== Statistics Recording ==========
+    
+    /**
+     * Record a sale (customer payment)
+     * Updates statistics and checks for upgrade unlocks
+     * 
+     * @param copperAmount Amount in copper coins
+     */
+    void recordSale(int copperAmount);
 }
 

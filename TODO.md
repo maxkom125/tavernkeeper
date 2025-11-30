@@ -8,6 +8,7 @@
   - [ ] Unlock upgrades (capacity, spawn rate, areas max size, chairs max amount)
   - [x] Different food = different payment amounts
   - [ ] Add advancments: coins earned milestones
+- [ ] Utilize events for messages!
 - [ ] Add sleeping requests
 
 ### Medium Priority

@@ -1,10 +1,13 @@
 package maxitoson.tavernkeeper.items;
 
 import com.mojang.logging.LogUtils;
+import maxitoson.tavernkeeper.areas.AreaMode;
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.Tavern;
+import maxitoson.tavernkeeper.tavern.Tavern.SignSetResult;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
+import maxitoson.tavernkeeper.tavern.spaces.DiningSpace.ScanResult;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -116,7 +119,7 @@ public class MarkingCane extends Item {
         
         // Delegate to Tavern for business logic
         Tavern tavern = Tavern.get(serverLevel);
-        maxitoson.tavernkeeper.tavern.Tavern.SignSetResult result = tavern.setTavernSign(pos);
+        SignSetResult result = tavern.setTavernSign(pos);
         
         // UI layer interprets result
         if (result.wasAlreadySet()) {
@@ -136,7 +139,7 @@ public class MarkingCane extends Item {
      */
     private void autoSaveArea(Player player, net.minecraft.server.level.ServerLevel level) {
         // Get current mode from player
-        AreaType currentMode = maxitoson.tavernkeeper.areas.AreaMode.getMode(player);
+        AreaType currentMode = AreaMode.getMode(player);
         // Delegate to main save method
         saveArea(player, currentMode, level);
     }
@@ -250,6 +253,23 @@ public class MarkingCane extends Item {
             String.format("§6[Marking Cane] §rSaved %s (§e%d blocks§r)", 
                 type.getColoredName() + " " + area.getName(), area.getVolume())
         ));
+        
+        // Display scan result warnings if any
+        Object scanResult = result.getScanResult();
+        if (scanResult instanceof ScanResult diningResult) {
+            if (diningResult.hadRejectedTables()) {
+                player.sendSystemMessage(Component.literal(
+                    String.format("§6[Marking Cane] §e⚠ Warning: %d tables were not recognized (table limit reached)", 
+                        diningResult.getTablesRejected())
+                ));
+            }
+            if (diningResult.hadRejectedChairs()) {
+                player.sendSystemMessage(Component.literal(
+                    String.format("§6[Marking Cane] §e⚠ Warning: %d chairs were not recognized (chair limit reached)", 
+                        diningResult.getChairsRejected())
+                ));
+            }
+        }
         
         // Sync to all players
         tavern.syncAreasToAllClients();
