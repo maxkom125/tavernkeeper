@@ -11,10 +11,6 @@ import net.minecraft.world.item.Item;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,7 +25,6 @@ public class AdvancementHandler {
     // Money milestone
     private static final long MILLIONAIRE_THRESHOLD = 1_000_000L;
     private static final ResourceLocation ADV_MILLIONAIRE = ResourceLocation.fromNamespaceAndPath(TavernKeeperMod.MODID, "millionaire");
-    private static final Set<UUID> millionairesAwarded = new HashSet<>();
     
     // Reputation milestones
     private static final int[] REPUTATION_THRESHOLDS = {10, 50, 100, 250, 500, 1000};
@@ -41,9 +36,6 @@ public class AdvancementHandler {
         ResourceLocation.fromNamespaceAndPath(TavernKeeperMod.MODID, "reputation_500"),
         ResourceLocation.fromNamespaceAndPath(TavernKeeperMod.MODID, "reputation_1000")
     };
-    
-    // Track highest reputation milestone reached per player
-    private static final Map<UUID, Integer> playerHighestReputation = new HashMap<>();
     
     // Coin collection advancements
     private static final ResourceLocation ADV_COPPER = ResourceLocation.fromNamespaceAndPath(TavernKeeperMod.MODID, "first_earning");
@@ -124,22 +116,26 @@ public class AdvancementHandler {
             return;
         }
         
+        var advancementManager = tavern.getAdvancementManager();
+
         // Check millionaire advancement
         long totalEarned = tavern.getTotalMoneyEarned();
-        if (totalEarned >= MILLIONAIRE_THRESHOLD && !millionairesAwarded.contains(ownerUUID)) {
+        if (totalEarned >= MILLIONAIRE_THRESHOLD && !advancementManager.hasMillionaireAward(ownerUUID)) {
             grantAdvancement(ownerPlayer, ADV_MILLIONAIRE);
-            millionairesAwarded.add(ownerUUID);
+            advancementManager.markMillionaireAwarded(ownerUUID);
+            tavern.setDirty(); // Mark tavern as dirty to save changes
         }
         
         // Check reputation advancements
         int currentReputation = tavern.getReputation();
-        int highestReached = playerHighestReputation.getOrDefault(ownerUUID, 0);
+        int highestReached = advancementManager.getPlayerHighestReputation(ownerUUID);
         
         for (int i = 0; i < REPUTATION_THRESHOLDS.length; i++) {
             int threshold = REPUTATION_THRESHOLDS[i];
             if (currentReputation >= threshold && highestReached < threshold) {
                 grantAdvancement(ownerPlayer, REPUTATION_ADVANCEMENTS[i]);
-                playerHighestReputation.put(ownerUUID, threshold);
+                advancementManager.setPlayerHighestReputation(ownerUUID, threshold);
+                tavern.setDirty(); // Mark tavern as dirty to save changes
                 highestReached = threshold;
             }
         }

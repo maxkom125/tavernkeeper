@@ -6,6 +6,7 @@ import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.network.NetworkHandler;
 import maxitoson.tavernkeeper.network.SyncAreasPacket;
+import maxitoson.tavernkeeper.tavern.managers.AdvancementManager;
 import maxitoson.tavernkeeper.tavern.managers.BaseManager;
 import maxitoson.tavernkeeper.tavern.managers.CustomerManager;
 import maxitoson.tavernkeeper.tavern.managers.DiningManager;
@@ -54,6 +55,7 @@ public class Tavern extends SavedData implements TavernContext {
     private final CustomerManager customerManager;
     private final EconomyManager economyManager;
     private final UpgradeManager upgradeManager;
+    private final AdvancementManager advancementManager;
     private final TavernStatistics statistics;
     private ServerLevel level;
     
@@ -73,6 +75,7 @@ public class Tavern extends SavedData implements TavernContext {
         this.serviceManager = new ServiceManager(this);
         this.customerManager = new CustomerManager(this);
         this.economyManager = new EconomyManager(this);
+        this.advancementManager = new AdvancementManager();
         
         // Apply default upgrade to all managers (single source of truth)
         applyCurrentUpgradeToAllManagers();
@@ -478,6 +481,10 @@ public class Tavern extends SavedData implements TavernContext {
         return upgradeManager;
     }
     
+    public AdvancementManager getAdvancementManager() {
+        return advancementManager;
+    }
+    
     // ========== Tavern State Queries (for CustomerManager) ==========
 
     /**
@@ -849,6 +856,7 @@ public class Tavern extends SavedData implements TavernContext {
     
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        // Save managers
         diningManager.save(tag, registries);
         sleepingManager.save(tag, registries);
         serviceManager.save(tag, registries);
@@ -857,7 +865,15 @@ public class Tavern extends SavedData implements TavernContext {
         // Save statistics and upgrades
         statistics.save(tag);
         upgradeManager.save(tag);
+        advancementManager.save(tag);
         
+        // Save tavern metadata
+        saveTavernMetadata(tag);
+        
+        return tag;
+    }
+    
+    private void saveTavernMetadata(CompoundTag tag) {
         // Save tavern owner
         if (ownerUUID != null) {
             tag.putUUID("ownerUUID", ownerUUID);
@@ -871,8 +887,6 @@ public class Tavern extends SavedData implements TavernContext {
         if (tavernSignPos != null) {
             tag.putLong("tavernSignPos", tavernSignPos.asLong());
         }
-        
-        return tag;
     }
 
     
@@ -889,34 +903,43 @@ public class Tavern extends SavedData implements TavernContext {
      */
     private void loadTavernData(HolderLookup.Provider registries) {
         if (loadedData != null && level != null) {
+            // Load managers
             diningManager.load(loadedData, level, registries);
             sleepingManager.load(loadedData, level, registries);
             serviceManager.load(loadedData, level, registries);
             customerManager.load(loadedData, level, registries);
+            
+            // Load statistics and upgrades
             statistics.load(loadedData);
             upgradeManager.load(loadedData);
+            advancementManager.load(loadedData);
             
             // Apply current upgrade to managers after loading
             applyCurrentUpgradeToAllManagers();
             
-            // Load tavern owner
-            if (loadedData.contains("ownerUUID")) {
-                ownerUUID = loadedData.getUUID("ownerUUID");
-                ownerName = loadedData.getString("ownerName");
-                LOGGER.info("Loaded tavern owner: {} ({})", ownerName, ownerUUID);
-            }
-            
-            // Load tavern open/closed state
-            if (loadedData.contains("manuallyOpen")) {
-                manuallyOpen = loadedData.getBoolean("manuallyOpen");
-            }
-            
-            // Load tavern sign position
-            if (loadedData.contains("tavernSignPos")) {
-                tavernSignPos = BlockPos.of(loadedData.getLong("tavernSignPos"));
-            }
+            // Load tavern metadata
+            loadTavernMetadata();
             
             loadedData = null;  // Clear after loading
+        }
+    }
+    
+    private void loadTavernMetadata() {
+        // Load tavern owner
+        if (loadedData.contains("ownerUUID")) {
+            ownerUUID = loadedData.getUUID("ownerUUID");
+            ownerName = loadedData.getString("ownerName");
+            LOGGER.info("Loaded tavern owner: {} ({})", ownerName, ownerUUID);
+        }
+        
+        // Load tavern open/closed state
+        if (loadedData.contains("manuallyOpen")) {
+            manuallyOpen = loadedData.getBoolean("manuallyOpen");
+        }
+        
+        // Load tavern sign position
+        if (loadedData.contains("tavernSignPos")) {
+            tavernSignPos = BlockPos.of(loadedData.getLong("tavernSignPos"));
         }
     }
 }
