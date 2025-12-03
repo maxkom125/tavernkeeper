@@ -6,6 +6,7 @@ import maxitoson.tavernkeeper.items.MarkingCane;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.tavern.Tavern.ToggleResult;
 import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager.ServiceResult;
+import maxitoson.tavernkeeper.tavern.utils.SignHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Player;
@@ -40,8 +41,7 @@ public class PlayerInteractionHandler {
         
         // Client-side: prevent sign editor from opening if holding marking cane
         if (level.isClientSide) {
-            if (state.getBlock() instanceof net.minecraft.world.level.block.SignBlock 
-                && heldItem.getItem() instanceof MarkingCane) {
+            if (SignHelper.isAnySign(state) && heldItem.getItem() instanceof MarkingCane) {
                 event.setCanceled(true);
                 event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
             }
@@ -53,8 +53,7 @@ public class PlayerInteractionHandler {
         Tavern tavern = Tavern.get(serverLevel);
         
         // Route 1: Holding marking cane + clicking sign → delegate to MarkingCane
-        if (heldItem.getItem() instanceof MarkingCane 
-            && state.getBlock() instanceof net.minecraft.world.level.block.SignBlock) {
+        if (heldItem.getItem() instanceof MarkingCane && SignHelper.isAnySign(state)) {
             MarkingCane.handleSignClick(serverLevel, pos, player);
             event.setCanceled(true);
             event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);

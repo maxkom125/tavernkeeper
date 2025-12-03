@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.tavern.Tavern;
+import maxitoson.tavernkeeper.tavern.utils.SignHelper;
 import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -36,7 +37,7 @@ public class WorldUpdateHandler {
             Tavern tavern = Tavern.get(serverLevel);
             
             // If placing a block at the tavern sign position, clear it (sign was replaced)
-            if (tavern.isTavernSign(pos) && !(event.getState().getBlock() instanceof net.minecraft.world.level.block.SignBlock)) {
+            if (tavern.isTavernSign(pos) && !SignHelper.isAnySign(event.getState())) {
                 LOGGER.info("Block placed at tavern sign position {} - clearing tavern sign", pos);
                 tavern.clearTavernSign();
             }

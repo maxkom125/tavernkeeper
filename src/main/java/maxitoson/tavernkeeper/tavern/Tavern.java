@@ -22,6 +22,7 @@ import maxitoson.tavernkeeper.tavern.furniture.Chair;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import maxitoson.tavernkeeper.tavern.upgrades.TavernUpgrade;
+import maxitoson.tavernkeeper.tavern.utils.SignHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -685,7 +686,7 @@ public class Tavern extends SavedData implements TavernContext {
         boolean destroyedOld = false;
         if (tavernSignPos != null && level != null) {
             net.minecraft.world.level.block.state.BlockState oldState = level.getBlockState(tavernSignPos);
-            if (oldState.getBlock() instanceof net.minecraft.world.level.block.SignBlock) {
+            if (SignHelper.isAnySign(oldState)) {
                 level.destroyBlock(tavernSignPos, true); // true = drop items
                 LOGGER.info("Destroyed old tavern sign at {}", tavernSignPos);
                 destroyedOld = true;
@@ -738,27 +739,15 @@ public class Tavern extends SavedData implements TavernContext {
             return;
         }
         
-        // Get the sign block entity
-        var blockEntity = level.getBlockEntity(tavernSignPos);
-        if (blockEntity instanceof net.minecraft.world.level.block.entity.SignBlockEntity signEntity) {
-            // Update the sign text
-            var frontText = signEntity.getFrontText();
-            frontText = frontText.setMessage(0, net.minecraft.network.chat.Component.literal(""));
-            frontText = frontText.setMessage(1, net.minecraft.network.chat.Component.literal(
-                manuallyOpen ? "§a§lOPEN" : "§c§lCLOSED"
-            ));
-            frontText = frontText.setMessage(2, net.minecraft.network.chat.Component.literal(""));
-            frontText = frontText.setMessage(3, net.minecraft.network.chat.Component.literal(""));
-            
-            signEntity.setText(frontText, true);
-            signEntity.setChanged();
-            
-            // Sync to clients
-            level.sendBlockUpdated(tavernSignPos, 
-                level.getBlockState(tavernSignPos), 
-                level.getBlockState(tavernSignPos), 
-                3);
-        }
+        // Delegate to SignHelper to update text (works for both regular and hanging signs)
+        SignHelper.updateSignText(
+            level, 
+            tavernSignPos,
+            net.minecraft.network.chat.Component.literal(""),
+            net.minecraft.network.chat.Component.literal(manuallyOpen ? "§a§lOPEN" : "§c§lCLOSED"),
+            net.minecraft.network.chat.Component.literal(""),
+            net.minecraft.network.chat.Component.literal("")
+        );
     }
     
     /**
