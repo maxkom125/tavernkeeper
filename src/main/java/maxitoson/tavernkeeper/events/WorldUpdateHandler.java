@@ -4,19 +4,22 @@ import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.tavern.Tavern;
+import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import org.slf4j.Logger;
 
 /**
- * Handles world state changes: block placement, block breaking, entity spawning.
+ * Handles world state changes: block placement, block breaking, entity spawning, entity death.
  * 
  * Responsibilities:
  * - Update furniture when blocks are placed/broken in tavern areas
  * - Clear tavern sign references when sign is broken/replaced
  * - Configure mob AI when entities spawn (e.g., skeletons targeting customers)
+ * - Handle customer death (decrease reputation)
  */
 @EventBusSubscriber(modid = TavernKeeperMod.MODID)
 public class WorldUpdateHandler {
@@ -77,6 +80,31 @@ public class WorldUpdateHandler {
                 CustomerEntity.class, 
                 true
             ));
+        }
+    }
+    
+    /**
+     * Handle customer death - decrease reputation and notify players.
+     * Uses TavernContext to avoid direct dependency on Tavern implementation.
+     */
+    @SubscribeEvent
+    public static void onCustomerDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof CustomerEntity customer && !customer.level().isClientSide) {
+            LOGGER.info("Customer {} died! Source: {}", customer.getId(), event.getSource().getMsgId());
+            
+            // Get tavern context and decrease reputation
+            if (customer.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                maxitoson.tavernkeeper.tavern.TavernContext tavern = Tavern.get(serverLevel);
+                if (tavern != null) {
+                    tavern.adjustReputation(-20);  // -20 reputation for customer death
+                    
+                    // Broadcast message to all players
+                    serverLevel.getServer().getPlayerList().broadcastSystemMessage(
+                        Component.literal("§cA customer died near your tavern! (-20 reputation)"), 
+                        false
+                    );
+                }
+            }
         }
     }
 }

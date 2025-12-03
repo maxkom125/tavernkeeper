@@ -2,9 +2,8 @@ package maxitoson.tavernkeeper.tavern.managers.domain;
 
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
-import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
-import maxitoson.tavernkeeper.tavern.spaces.DiningManagerContext;
 import maxitoson.tavernkeeper.tavern.spaces.DiningSpace;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;

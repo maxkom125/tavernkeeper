@@ -3,6 +3,7 @@ package maxitoson.tavernkeeper.tavern.spaces;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
 import maxitoson.tavernkeeper.tavern.furniture.Table;
+import maxitoson.tavernkeeper.tavern.managers.domain.DiningManagerContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -156,8 +157,8 @@ public class DiningSpace extends BaseSpace {
             }
         }
         
-        // Re-validate all chairs since a table might have been placed/removed
-        validateChairs();
+        // Schedule validation for next tick (after block change is committed to level)
+        scheduleValidation();
     }
     
     /**
@@ -181,21 +182,48 @@ public class DiningSpace extends BaseSpace {
     }
     
     /**
-     * Validate that each chair is facing a table
+     * Schedule chair validation to run on the next tick
+     * This ensures all block changes are committed to the level before validation
+     */
+    private void scheduleValidation() {
+        Level level = area.getLevel();
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            serverLevel.getServer().execute(this::validateChairs);
+        }
+    }
+    
+    /**
+     * Validate that each chair is facing a table and has air above it
      */
     private void validateChairs() {
+        Level level = area.getLevel();
+        if (level == null) return;
+        
         int validCount = 0;
         for (Chair chair : chairs) {
             BlockPos tableMustBePos = chair.getFrontPos();
             boolean hasTable = tables.stream()
                 .anyMatch(t -> t.getPosition().equals(tableMustBePos));
             
-            chair.setValid(hasTable);
-            if (hasTable) {
+            // Check if there's an air block above the chair
+            BlockPos abovePos = chair.getPosition().above();
+            BlockState aboveState = level.getBlockState(abovePos);
+            boolean hasAirAbove = aboveState.isAir();
+            
+            // Chair is valid only if it faces a table AND has air above it
+            boolean isValid = hasTable && hasAirAbove;
+            chair.setValid(isValid);
+            
+            if (isValid) {
                 validCount++;
-                LOGGER.debug("Chair at {} is VALID (faces table at {})", chair.getPosition(), tableMustBePos);
+                LOGGER.debug("Chair at {} is VALID (faces table at {}, air above)", chair.getPosition(), tableMustBePos);
             } else {
-                LOGGER.debug("Chair at {} is INVALID (no table at {})", chair.getPosition(), tableMustBePos);
+                if (!hasTable) {
+                    LOGGER.debug("Chair at {} is INVALID (no table at {})", chair.getPosition(), tableMustBePos);
+                }
+                if (!hasAirAbove) {
+                    LOGGER.debug("Chair at {} is INVALID (no air above at {})", chair.getPosition(), abovePos);
+                }
             }
         }
         LOGGER.debug("Chair validation complete: {}/{} valid", validCount, chairs.size());

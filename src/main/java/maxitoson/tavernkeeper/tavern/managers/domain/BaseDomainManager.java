@@ -2,7 +2,7 @@ package maxitoson.tavernkeeper.tavern.managers.domain;
 
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
-import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
 // import maxitoson.tavernkeeper.tavern.spaces.ManagerContext;
 import net.minecraft.core.BlockPos;

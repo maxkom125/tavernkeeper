@@ -1,6 +1,7 @@
 package maxitoson.tavernkeeper.tavern.spaces;
 
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.tavern.managers.domain.SleepingManagerContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;

@@ -1,6 +1,7 @@
 package maxitoson.tavernkeeper.tavern.spaces;
 
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.tavern.managers.domain.ServiceManagerContext;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceBarrel;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
 import net.minecraft.core.BlockPos;

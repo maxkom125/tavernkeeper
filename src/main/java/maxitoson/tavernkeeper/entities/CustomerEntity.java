@@ -7,6 +7,7 @@ import com.mojang.serialization.Dynamic;
 import maxitoson.tavernkeeper.entities.ai.behavior.CustomerGoalPackages;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -45,6 +46,10 @@ public class CustomerEntity extends AbstractVillager {
     private net.minecraft.core.BlockPos targetPosition = null; // Target position (lectern or chair)
     private FoodRequest foodRequest = null; // What food customer wants
     private net.minecraft.core.BlockPos spawnPosition = null; // Where customer spawned (for returning when leaving)
+    
+    // Panic tracking - cumulative total time across all panic episodes
+    private long totalPanicTicks = 0; // Total ticks spent in panic (accumulates across episodes)
+    private static final long MAX_PANIC_DURATION = 1200; // 60 seconds (20 ticks per second)
     
     // Brain configuration - similar to Villager (line 131-132)
     // Note: We add NEAREST_HOSTILE for panic behavior
@@ -151,7 +156,20 @@ public class CustomerEntity extends AbstractVillager {
         this.getBrain().tick((ServerLevel) this.level(), this);
         this.level().getProfiler().pop();
         
-        // TODO: Add customer-specific logic here (like Villager has trading/restocking)
+        // Track cumulative panic time across all panic episodes
+        if (isCurrentlyPanicking()) {
+            totalPanicTicks++;
+            
+            // Check if total panic time exceeds maximum (60 seconds)
+            if (totalPanicTicks >= MAX_PANIC_DURATION) {
+                // Customer has been panicking for too long (cumulative) - trigger event
+                LOGGER.info("Customer {} exceeded max total panic time: {} ticks ({}s), despawning", 
+                    this.getId(), totalPanicTicks, totalPanicTicks / 20);
+                
+                decreaseReputationAndNotify(-5, "A customer was terrified for too long near your tavern! (-5 reputation)");
+                this.discard();
+            }
+        }
         
         // Call parent LAST - same as Villager line 246
         super.customServerAiStep();
@@ -176,6 +194,34 @@ public class CustomerEntity extends AbstractVillager {
     public void saveStateBeforePanic() {
         this.stateBeforePanic = this.customerState;
         LOGGER.debug("Customer {} saved state before panic: {}", this.getId(), this.stateBeforePanic);
+    }
+    
+    // Panic time tracking - cumulative across all panic episodes
+    public long getTotalPanicTicks() {
+        return totalPanicTicks;
+    }
+    
+    public boolean isCurrentlyPanicking() {
+        return this.getBrain().isActive(Activity.PANIC);
+    }
+    
+    /**
+     * Decrease tavern reputation and broadcast message to players.
+     * Uses TavernContext to avoid direct dependency on Tavern implementation.
+     */
+    private void decreaseReputationAndNotify(int reputationChange, String message) {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            maxitoson.tavernkeeper.tavern.TavernContext tavern = maxitoson.tavernkeeper.tavern.Tavern.get(serverLevel);
+            if (tavern != null) {
+                tavern.adjustReputation(reputationChange);
+                
+                // Broadcast message to all players via context
+                serverLevel.getServer().getPlayerList().broadcastSystemMessage(
+                    Component.literal(message), 
+                    false
+                );
+            }
+        }
     }
     
     // Target position management (lectern, chair, etc.)
@@ -230,6 +276,9 @@ public class CustomerEntity extends AbstractVillager {
             tag.putInt("TargetY", this.targetPosition.getY());
             tag.putInt("TargetZ", this.targetPosition.getZ());
         }
+        
+        // Save panic tracking (cumulative total)
+        tag.putLong("TotalPanicTicks", this.totalPanicTicks);
     }
     
     // NBT deserialization - load customer data when world is loaded
@@ -264,6 +313,11 @@ public class CustomerEntity extends AbstractVillager {
                 tag.getInt("TargetY"),
                 tag.getInt("TargetZ")
             );
+        }
+        
+        // Load panic tracking (cumulative total)
+        if (tag.contains("TotalPanicTicks")) {
+            this.totalPanicTicks = tag.getLong("TotalPanicTicks");
         }
     }
     

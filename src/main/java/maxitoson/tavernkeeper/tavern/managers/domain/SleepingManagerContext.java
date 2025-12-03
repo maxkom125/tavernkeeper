@@ -1,4 +1,6 @@
-package maxitoson.tavernkeeper.tavern.spaces;
+package maxitoson.tavernkeeper.tavern.managers.domain;
+
+import maxitoson.tavernkeeper.tavern.managers.ManagerContext;
 
 /**
  * Interface defining what SleepingSpace can query from its parent SleepingManager

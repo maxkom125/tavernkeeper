@@ -2,7 +2,7 @@ package maxitoson.tavernkeeper.tavern.managers.system;
 
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.events.TavernUpgradedEvent;
-import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.upgrades.TavernUpgrade;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;

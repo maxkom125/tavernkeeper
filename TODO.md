@@ -8,7 +8,7 @@
   - [x] Unlock upgrades (capacity, spawn rate, areas max size, chairs max amount)
   - [x] Different food = different payment amounts
   - [x] Add advancments: coins earned milestones
-- [ ] Fix bug: Customers spawn on trees (maybe on snow on them?) -> fell down -> trigger 'run away from danger' event
+- [x] Fix bug: Customers spawn on trees (maybe on snow on them?) -> fell down -> trigger 'run away from danger' event
 - [ ] Add sleeping requests
 
 ### Medium Priority

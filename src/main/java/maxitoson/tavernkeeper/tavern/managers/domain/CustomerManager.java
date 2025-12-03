@@ -6,7 +6,7 @@ import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.events.CustomerPaymentEvent;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
-import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

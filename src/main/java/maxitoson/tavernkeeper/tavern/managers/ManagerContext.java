@@ -1,4 +1,4 @@
-package maxitoson.tavernkeeper.tavern.spaces;
+package maxitoson.tavernkeeper.tavern.managers;
 
 /**
  * Base marker interface for all Manager context interfaces

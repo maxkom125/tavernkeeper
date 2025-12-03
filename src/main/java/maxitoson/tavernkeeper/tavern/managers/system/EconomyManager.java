@@ -2,7 +2,7 @@ package maxitoson.tavernkeeper.tavern.managers.system;
 
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import maxitoson.tavernkeeper.tavern.economy.Price;
-import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 
 import com.mojang.logging.LogUtils;

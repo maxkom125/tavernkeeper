@@ -1,6 +1,6 @@
 package maxitoson.tavernkeeper.tavern.upgrades;
 
-import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager;
 import maxitoson.tavernkeeper.tavern.managers.domain.DiningManager;
 import maxitoson.tavernkeeper.tavern.managers.system.EconomyManager;

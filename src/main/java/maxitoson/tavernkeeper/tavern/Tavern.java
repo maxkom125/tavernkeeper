@@ -6,7 +6,7 @@ import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.network.NetworkHandler;
 import maxitoson.tavernkeeper.network.SyncAreasPacket;
-import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.managers.domain.BaseDomainManager;
 import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager;
 import maxitoson.tavernkeeper.tavern.managers.domain.DiningManager;

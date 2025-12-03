@@ -77,7 +77,7 @@ tavernkeeper/
 - **Sleeping Areas**: Beds
 - **Service Areas**: Lecterns (Queue points) + Barrels (recognized but not used yet)
 - **Optimized**: Only updates specific block position, no full rescans
-- **Smart validation**: Chairs must face tables to be valid
+- **Smart validation**: Chairs must face tables and have air block above to be valid
 
 ### 8. **Customer System** ✨
 - **Service Areas**: Reception desks with lecterns (barrels optional decoration)
@@ -224,7 +224,7 @@ Uses exact logic from Minecraft's Raid system (`Raid.java` lines 686-706):
 
 ## 🐛 Known Issues
 
-- **Customer Spawning**: Customers may spawn on trees/snow and fall, triggering "run away" behavior. Needs spawn validation improvements.
+Nothing!
 
 ---
 

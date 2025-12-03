@@ -1,20 +1,24 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern;
 
 import net.minecraft.core.BlockPos;
 
 /**
- * Interface defining what Managers can query from their parent Tavern
+ * Interface defining what components can query from Tavern
  * 
  * This follows the Interface Segregation Principle (ISP):
- * - Managers depend on an abstraction, not the concrete Tavern
- * - Compile-time enforcement: Managers can ONLY call these methods
- * - Each manager gets exactly what it needs, no more
+ * - Components (Managers, Entities) depend on an abstraction, not the concrete Tavern
+ * - Compile-time enforcement: Components can ONLY call these methods
+ * - Each component gets exactly what it needs, no more
  * 
  * Benefits:
- * - Prevents managers from accessing other managers (getDiningManager() not exposed)
- * - Prevents managers from modifying tavern (createArea() not exposed)
- * - Clear contract: "This is what a Manager can ask from its Tavern"
+ * - Prevents direct access to Tavern internals
+ * - Prevents components from accessing other components (getDiningManager() not exposed)
+ * - Clear contract: "This is what you can ask from Tavern"
  * - Easier to test: Mock this interface instead of entire Tavern
+ * 
+ * Used by:
+ * - Managers (to access tavern state and record statistics)
+ * - Entities (to adjust reputation and notify players)
  */
 public interface TavernContext {
     /**
@@ -63,5 +67,13 @@ public interface TavernContext {
      * @param amount Amount to change (can be positive or negative)
      */
     void adjustReputation(int amount);
+    
+    // ========== Server Access ==========
+    
+    /**
+     * Get the server level for broadcasting messages
+     * Used by entities to send messages to all players
+     */
+    net.minecraft.server.level.ServerLevel getLevel();
 }
 
