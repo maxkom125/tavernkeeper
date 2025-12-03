@@ -1,0 +1,24 @@
+{
+  "parent": "tavernkeeper:reputation_50",
+  "display": {
+    "icon": {
+      "id": "minecraft:golden_apple"
+    },
+    "title": {
+      "translate": "advancement.tavernkeeper.reputation_100.title"
+    },
+    "description": {
+      "translate": "advancement.tavernkeeper.reputation_100.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "reputation_100": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
+

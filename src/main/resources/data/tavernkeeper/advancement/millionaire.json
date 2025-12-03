@@ -1,0 +1,24 @@
+{
+  "parent": "tavernkeeper:netherite_collector",
+  "display": {
+    "icon": {
+      "id": "tavernkeeper:netherite_coin"
+    },
+    "title": {
+      "translate": "advancement.tavernkeeper.millionaire.title"
+    },
+    "description": {
+      "translate": "advancement.tavernkeeper.millionaire.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "earned_million": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
+

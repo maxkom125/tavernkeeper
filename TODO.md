@@ -1,14 +1,15 @@
 ### High Priority (Next Focus)
 - [x] Add tavern open/close mechanic
 - [x] **Tavern Ownership System** - First player to create area becomes owner
-- [ ] **Economy System**
+- [x] **Economy System**
   - [x] Create internal money (Coins: Copper -> Netherite)
   - [x] Wallet: auto-pickup, auto-convert (100:1), manual extract
-  - [ ] Track earned money (Statistics/GUI)
-  - [ ] Unlock upgrades (capacity, spawn rate, areas max size, chairs max amount)
+  - [x] Track earned money (Statistics/GUI)
+  - [x] Unlock upgrades (capacity, spawn rate, areas max size, chairs max amount)
   - [x] Different food = different payment amounts
-  - [ ] Add advancments: coins earned milestones
+  - [x] Add advancments: coins earned milestones
 - [ ] Utilize events for messages!
+- [ ] Fix bug: Customers spawn on trees (maybe on snow on them?) -> fell down -> trigger 'run away from danger' event
 - [ ] Add sleeping requests
 
 ### Medium Priority
@@ -30,6 +31,9 @@
   - [ ] Demand tweaks (price multipliers based on time/events)
   - [ ] Food standing on the counter should be bought more likely
   - [ ] Customers leave tips on the tables
+- [ ] **Tavern Upgrades update**
+  - [ ] Add more levels, better thresholds
+  - [ ] Add areas size limit
 
 ### Low Priority
 - [ ] **Customer Variety**

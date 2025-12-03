@@ -9,6 +9,35 @@
   "item.tavernkeeper.wallet": "Coin Purse",
   "item.tavernkeeper.wallet.tooltip": "Right-click coins to store, right-click empty slot to extract",
   "item.tavernkeeper.example_item": "Example Item",
-  "item.tavernkeeper.customer_spawn_egg": "Customer Spawn Egg"
+  "item.tavernkeeper.customer_spawn_egg": "Customer Spawn Egg",
+  
+  "advancement.tavernkeeper.root.title": "Tavern Keeper",
+  "advancement.tavernkeeper.root.description": "Begin your journey as a tavern keeper. Build, serve, and prosper!",
+  
+  "advancement.tavernkeeper.first_earning.title": "Spare Change",
+  "advancement.tavernkeeper.first_earning.description": "Receive a copper coin",
+  "advancement.tavernkeeper.iron_collector.title": "Not Broke Anymore",
+  "advancement.tavernkeeper.iron_collector.description": "Receive an iron coin",
+  "advancement.tavernkeeper.gold_collector.title": "Show Me The Money!",
+  "advancement.tavernkeeper.gold_collector.description": "Receive a gold coin",
+  "advancement.tavernkeeper.diamond_collector.title": "Living Large",
+  "advancement.tavernkeeper.diamond_collector.description": "Receive a diamond coin",
+  "advancement.tavernkeeper.netherite_collector.title": "Unreachable Wealth",
+  "advancement.tavernkeeper.netherite_collector.description": "Receive a netherite coin",
+  "advancement.tavernkeeper.millionaire.title": "The Millionaire!",
+  "advancement.tavernkeeper.millionaire.description": "Earn 1,000,000 copper coins in total",
+  
+  "advancement.tavernkeeper.reputation_10.title": "Local Gossip",
+  "advancement.tavernkeeper.reputation_10.description": "Reach 10 reputation",
+  "advancement.tavernkeeper.reputation_50.title": "Town Favorite",
+  "advancement.tavernkeeper.reputation_50.description": "Reach 50 reputation",
+  "advancement.tavernkeeper.reputation_100.title": "Well-Known Establishment",
+  "advancement.tavernkeeper.reputation_100.description": "Reach 100 reputation",
+  "advancement.tavernkeeper.reputation_250.title": "The Talk of the Region",
+  "advancement.tavernkeeper.reputation_250.description": "Reach 250 reputation",
+  "advancement.tavernkeeper.reputation_500.title": "Legendary Tavern",
+  "advancement.tavernkeeper.reputation_500.description": "Reach 500 reputation",
+  "advancement.tavernkeeper.reputation_1000.title": "Idol",
+  "advancement.tavernkeeper.reputation_1000.description": "Reach 1,000 reputation"
 }
 

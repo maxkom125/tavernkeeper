@@ -7,6 +7,7 @@ import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.network.NetworkHandler;
 import maxitoson.tavernkeeper.network.SyncAreasPacket;
 import maxitoson.tavernkeeper.tavern.Tavern;
+import maxitoson.tavernkeeper.tavern.TavernCommand;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -79,7 +80,8 @@ public class TavernLifecycleHandler {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         AreaCommand.register(event.getDispatcher());
-        LOGGER.info("Registered tavern area commands");
+        TavernCommand.register(event.getDispatcher());
+        LOGGER.info("Registered tavern commands");
     }
 }
 

@@ -55,5 +55,13 @@ public interface TavernContext {
      * @param copperAmount Amount in copper coins
      */
     void recordSale(int copperAmount);
+    
+    /**
+     * Adjust tavern reputation (positive to increase, negative to decrease)
+     * Triggers upgrade checks and persistence
+     * 
+     * @param amount Amount to change (can be positive or negative)
+     */
+    void adjustReputation(int amount);
 }
 

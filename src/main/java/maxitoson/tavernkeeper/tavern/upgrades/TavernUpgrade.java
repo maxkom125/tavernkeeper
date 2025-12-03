@@ -9,83 +9,67 @@ import maxitoson.tavernkeeper.tavern.managers.TavernContext;
  * Defines tavern upgrade levels with requirements and benefits
  * Each level specifies what it unlocks and how it modifies manager limits
  * 
- * Pattern: Each upgrade level applies itself to managers
+ * Pattern: Values stored as enum fields (single source of truth)
+ * Apply methods use these fields to update managers!
  */
 public enum TavernUpgrade {
     LEVEL_1(
+        // Requirements
         0,      // No reputation required
         0,      // No money required
-        "Basic Tavern"
-    ) {
-        @Override
-        public void applyToDiningManager(DiningManager manager) {
-            manager.setMaxTables(50);
-            manager.setMaxChairs(200);  // 4 chairs per table on average
-        }
-        
-        @Override
-        public void applyToCustomerManager(CustomerManager manager) {
-            manager.setSpawnRateMultiplier(1.0f);
-        }
-        
-        @Override
-        public void applyToEconomyManager(EconomyManager manager) {
-            manager.setPaymentMultiplier(1.0f);
-        }
-    },
+        "Basic Tavern",
+        // Benefits
+        2,      // Max tables
+        8,      // Max chairs
+        1.0f,   // Spawn rate multiplier
+        1.0f    // Payment multiplier
+    ),
     
     LEVEL_2(
+        // Requirements
         100,    // Reputation required
         500,    // Copper coins required
-        "Improved Tavern"
-    ) {
-        @Override
-        public void applyToDiningManager(DiningManager manager) {
-            manager.setMaxTables(75);
-            manager.setMaxChairs(300);  // 4 chairs per table on average
-        }
-        
-        @Override
-        public void applyToCustomerManager(CustomerManager manager) {
-            manager.setSpawnRateMultiplier(1.5f); // 50% faster spawns
-        }
-        
-        @Override
-        public void applyToEconomyManager(EconomyManager manager) {
-            manager.setPaymentMultiplier(1.2f);  // +20% payment
-        }
-    },
+        "Improved Tavern",
+        // Benefits
+        4,      // Max tables
+        16,     // Max chairs
+        1.1f,   // Spawn rate multiplier (10% faster)
+        1.1f    // Payment multiplier (+10%)
+    ),
     
     LEVEL_3(
+        // Requirements
         500,    // Reputation required
-        2000,   // Copper coins required
-        "Renowned Tavern"
-    ) {
-        @Override
-        public void applyToDiningManager(DiningManager manager) {
-            manager.setMaxTables(100);
-            manager.setMaxChairs(400);  // 4 chairs per table on average
-        }
-        
-        @Override
-        public void applyToCustomerManager(CustomerManager manager) {
-            manager.setSpawnRateMultiplier(2.0f); // 2x faster spawns
-        }
-        
-        @Override
-        public void applyToEconomyManager(EconomyManager manager) {
-            manager.setPaymentMultiplier(1.5f);  // +50% payment
-        }
-    };
+        4000,   // Copper coins required
+        "Renowned Tavern",
+        // Benefits
+        8,      // Max tables
+        32,     // Max chairs
+        1.3f,   // Spawn rate multiplier (30% faster)
+        1.3f    // Payment multiplier (+30%)
+    );
     
+    // Requirements
     private final int reputationRequired;
     private final int moneyRequired;
     private final String displayName;
     
-    TavernUpgrade(int reputationRequired, int moneyRequired, String displayName) {
+    // Benefits
+    private final int maxTables;
+    private final int maxChairs;
+    private final float spawnRateMultiplier;
+    private final float paymentMultiplier;
+    
+    TavernUpgrade(int reputationRequired, int moneyRequired, String displayName,
+                  int maxTables, int maxChairs, 
+                  float spawnRateMultiplier, float paymentMultiplier) {
         this.reputationRequired = reputationRequired;
         this.moneyRequired = moneyRequired;
         this.displayName = displayName;
+        this.maxTables = maxTables;
+        this.maxChairs = maxChairs;
+        this.spawnRateMultiplier = spawnRateMultiplier;
+        this.paymentMultiplier = paymentMultiplier;
     }
     
     /**
@@ -98,21 +82,62 @@ public enum TavernUpgrade {
     
     /**
      * Apply this upgrade to a DiningManager
-     * Subclasses override to set specific limits
+     * Uses the stored benefit values
      */
-    public abstract void applyToDiningManager(DiningManager manager);
+    public void applyToDiningManager(DiningManager manager) {
+        manager.setMaxTables(maxTables);
+        manager.setMaxChairs(maxChairs);
+    }
     
     /**
      * Apply this upgrade to a CustomerManager
-     * Subclasses override to set spawn rate multiplier
+     * Uses the stored benefit values
      */
-    public abstract void applyToCustomerManager(CustomerManager manager);
+    public void applyToCustomerManager(CustomerManager manager) {
+        manager.setSpawnRateMultiplier(spawnRateMultiplier);
+    }
     
     /**
      * Apply this upgrade to an EconomyManager
-     * Subclasses override to set payment multiplier
+     * Uses the stored benefit values
      */
-    public abstract void applyToEconomyManager(EconomyManager manager);
+    public void applyToEconomyManager(EconomyManager manager) {
+        manager.setPaymentMultiplier(paymentMultiplier);
+    }
+    
+    // ========== Benefit Getters (for display/queries) ==========
+    
+    /**
+     * Get the max tables this upgrade level provides
+     * Used for display and comparison
+     */
+    public int getMaxTables() {
+        return maxTables;
+    }
+    
+    /**
+     * Get the max chairs this upgrade level provides
+     * Used for display and comparison
+     */
+    public int getMaxChairs() {
+        return maxChairs;
+    }
+    
+    /**
+     * Get the spawn rate multiplier this upgrade level provides
+     * Used for display and comparison
+     */
+    public float getSpawnRateMultiplier() {
+        return spawnRateMultiplier;
+    }
+    
+    /**
+     * Get the payment multiplier this upgrade level provides
+     * Used for display and comparison
+     */
+    public float getPaymentMultiplier() {
+        return paymentMultiplier;
+    }
     
     /**
      * Get the next upgrade level, or null if this is max level
@@ -131,7 +156,8 @@ public enum TavernUpgrade {
         return prevOrdinal >= 0 ? TavernUpgrade.values()[prevOrdinal] : null;
     }
     
-    // Getters
+    // ========== Requirement Getters ==========
+    
     public int getReputationRequired() {
         return reputationRequired;
     }

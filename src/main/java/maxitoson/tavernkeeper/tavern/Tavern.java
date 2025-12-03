@@ -570,6 +570,31 @@ public class Tavern extends SavedData implements TavernContext {
     }
     
     /**
+     * Adjust tavern reputation (positive to increase, negative to decrease)
+     * Triggers upgrade checks and persistence
+     * 
+     * @param amount Amount to change (can be positive or negative)
+     */
+    @Override
+    public void adjustReputation(int amount) {
+        modifyStatistics(() -> {
+            statistics.addReputation(amount);
+        });
+    }
+    
+    /**
+     * Adjust tavern total money earned
+     * Triggers upgrade checks and persistence
+     * 
+     * @param amount Amount to add to total earned (typically positive)
+     */
+    public void adjustMoney(int amount) {
+        modifyStatistics(() -> {
+            statistics.addMoney(amount);
+        });
+    }
+    
+    /**
      * Modify statistics and automatically check for upgrades
      * 
      * CRITICAL: All statistics modifications MUST go through this method!

@@ -48,16 +48,20 @@ tavernkeeper/
 ├── events/         # Event handlers (organized by domain)
 │   ├── PlayerInteractionHandler.java    # Player clicks & interactions
 │   ├── WorldUpdateHandler.java          # Block place/break, entity spawn
-│   └── TavernLifecycleHandler.java      # Tick, player join, commands
+│   ├── TavernLifecycleHandler.java      # Tick, player join, commands
+│   ├── TavernUpgradeHandler.java        # Upgrade notifications
+│   └── AdvancementHandler.java          # Grant advancements (coins, reputation, money)
 ├── entities/       # CustomerEntity, AI behaviors
 │   └── ai/
 │       └── behavior/  # FindSeat, EatAtChair, Leave, etc.
 ├── tavern/         # Domain logic (DDD architecture)
 │   ├── Tavern.java       # Aggregate root with result objects
+│   ├── TavernCommand.java # Commands for stats/upgrade info
 │   ├── managers/   # DiningManager, ServiceManager, CustomerManager, EconomyManager
 │   ├── spaces/     # DiningSpace, ServiceSpace, SleepingSpace
 │   ├── furniture/  # Chair, Table, ServiceLectern, ServiceBarrel
-│   └── economy/    # FoodRequest, Price, CoinRegistry
+│   ├── economy/    # FoodRequest, Price, CoinRegistry
+│   └── upgrades/   # TavernUpgrade (enum), UpgradeDetails, UpgradeFormatter
 ├── client/         # CustomerEntityRenderer, FoodRequestLayer
 └── network/        # NetworkHandler, SyncAreasPacket
 ```
@@ -105,6 +109,24 @@ tavernkeeper/
   - Right-click coins to store, right-click empty to extract
   - Intercepts customer payments automatically
 - **Payment**: Full coin breakdown (e.g., 232 copper → 2 Iron + 32 Copper)
+
+### 11. **Tavern Upgrades** ⬆️
+- **Upgrade Levels** with balanced progression
+- **Automatic Upgrades**: System checks after every payment. Upgrade adjusts limits/multipliers and notifies players
+- **Commands**: `/tavern upgrade` shows current level and next requirements
+
+### 12. **Reputation System** ⭐
+- Earn/lose reputation based on customer service
+- Affects upgrade unlocks and future features
+
+### 13. **Advancements** 🏆
+- Coin collection (5 tiers), reputation milestones (6 levels), money earned
+- Auto-granted during gameplay
+
+### 14. **Tavern Commands** 🔧
+- `/tavern stats` - View owner, status, and statistics
+- `/tavern upgrade` - View current level and next requirements
+- `/tavern adjust` - Manual adjustments (money, reputation) for testing
 
 ---
 
@@ -180,6 +202,7 @@ Uses exact logic from Minecraft's Raid system (`Raid.java` lines 686-706):
 - Area definitions (positions, types, names)
 - Area counters (auto-numbering)
 - Customer manager settings (capacity, spawn intervals)
+- Tavern statistics (reputation, money earned, customers served, upgrade level)
 
 **What Doesn't Get Saved:**
 - Customer entity UUIDs (entities persist themselves via Minecraft)
@@ -196,7 +219,7 @@ Uses exact logic from Minecraft's Raid system (`Raid.java` lines 686-706):
 
 ## 🐛 Known Issues
 
-None! All major features implemented and working.
+- **Customer Spawning**: Customers may spawn on trees/snow and fall, triggering "run away" behavior. Needs spawn validation improvements.
 
 ---
 

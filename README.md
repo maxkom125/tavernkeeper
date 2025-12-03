@@ -38,6 +38,10 @@ Run a fully functional tavern in Minecraft:
 - **Dynamic pricing**: better food = higher pay
 - *Coming soon: Dish of the Week bonuses, demand tweaks*
 
+### Progression System
+- **Tavern Upgrades**: 3 levels with automatic unlocks (reputation + money)
+- **Advancements**: Coin collection, reputation, and earnings milestones
+
 ## Documentation
 
 - **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Complete documentation (how to use, technical details)

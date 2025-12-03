@@ -1,0 +1,24 @@
+{
+  "parent": "tavernkeeper:reputation_500",
+  "display": {
+    "icon": {
+      "id": "minecraft:dragon_egg"
+    },
+    "title": {
+      "translate": "advancement.tavernkeeper.reputation_1000.title"
+    },
+    "description": {
+      "translate": "advancement.tavernkeeper.reputation_1000.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "reputation_1000": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
+

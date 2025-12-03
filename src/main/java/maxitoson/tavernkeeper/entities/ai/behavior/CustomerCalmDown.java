@@ -3,8 +3,10 @@ package maxitoson.tavernkeeper.entities.ai.behavior;
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
+import maxitoson.tavernkeeper.tavern.Tavern;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -57,9 +59,17 @@ public class CustomerCalmDown {
                                 LOGGER.info("Customer {} ran too far from target (distance: {}), despawning", 
                                     customer.getId(), distance);
                                 
+                                // Decrease tavern reputation
+                                if (level instanceof ServerLevel serverLevel) {
+                                    Tavern tavern = Tavern.get(serverLevel);
+                                    if (tavern != null) {
+                                        tavern.adjustReputation(-5);  // -5 reputation for customer running away
+                                    }
+                                }
+                                
                                 // Broadcast message to nearby players
                                 level.getServer().getPlayerList().broadcastSystemMessage(
-                                    Component.literal("A customer ran away from danger near your tavern!"), 
+                                    Component.literal("A customer ran away from danger near your tavern! (-5 reputation)"), 
                                     false
                                 );
                                 

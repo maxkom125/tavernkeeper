@@ -1,0 +1,31 @@
+{
+  "parent": "tavernkeeper:diamond_collector",
+  "display": {
+    "icon": {
+      "id": "tavernkeeper:netherite_coin"
+    },
+    "title": {
+      "translate": "advancement.tavernkeeper.netherite_collector.title"
+    },
+    "description": {
+      "translate": "advancement.tavernkeeper.netherite_collector.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got_netherite": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["tavernkeeper:netherite_coin"]
+          }
+        ]
+      }
+    }
+  }
+}
+

@@ -1,0 +1,31 @@
+{
+  "parent": "tavernkeeper:root",
+  "display": {
+    "icon": {
+      "id": "tavernkeeper:copper_coin"
+    },
+    "title": {
+      "translate": "advancement.tavernkeeper.first_earning.title"
+    },
+    "description": {
+      "translate": "advancement.tavernkeeper.first_earning.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got_copper": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["tavernkeeper:copper_coin"]
+          }
+        ]
+      }
+    }
+  }
+}
+

@@ -1,9 +1,12 @@
 package maxitoson.tavernkeeper.items;
 
 import maxitoson.tavernkeeper.TavernKeeperMod;
+import maxitoson.tavernkeeper.events.AdvancementHandler;
 import maxitoson.tavernkeeper.events.CustomerPaymentEvent;
 import maxitoson.tavernkeeper.tavern.economy.CoinRegistry;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -63,15 +66,24 @@ public class WalletHandler {
 
     /**
      * Try to add coins to player's wallet.
+     * Also triggers coin collection advancements on server side.
      * @return true if coins were added to a wallet, false if no wallet found
      */
     public static boolean tryAddToWallet(Player player, ItemStack coinStack) {
         if (!CoinRegistry.isCoin(coinStack.getItem())) return false;
         
+        Item coinType = coinStack.getItem();
+        
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack stack = player.getInventory().getItem(i);
             if (stack.getItem() instanceof WalletItem walletItem) {
                 walletItem.addCoin(stack, coinStack);
+                
+                // Grant coin collection advancement on server side
+                if (player instanceof ServerPlayer serverPlayer) {
+                    AdvancementHandler.checkCoinAdvancement(serverPlayer, coinType);
+                }
+                
                 return true;
             }
         }
