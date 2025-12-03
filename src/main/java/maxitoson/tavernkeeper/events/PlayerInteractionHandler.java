@@ -5,7 +5,7 @@ import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.items.MarkingCane;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.tavern.Tavern.ToggleResult;
-import maxitoson.tavernkeeper.tavern.managers.CustomerManager.ServiceResult;
+import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager.ServiceResult;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Player;

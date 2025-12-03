@@ -1,7 +1,8 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern.managers.domain;
 
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.tavern.managers.TavernContext;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
 // import maxitoson.tavernkeeper.tavern.spaces.ManagerContext;
 import net.minecraft.core.BlockPos;
@@ -15,13 +16,13 @@ import net.minecraft.world.phys.AABB;
 import java.util.*;
 
 /**
- * Base manager class that handles space collection and area management
- * Provides common functionality for all manager types (Dining, Sleeping, etc.)
+ * Base class for all domain managers that handle physical spaces
+ * Provides common functionality for managing spaces (Dining, Sleeping, Service)
  * 
  * Pattern: Manager owns Spaces, Space owns Area (1:1)
  * @param <T> The type of space this manager handles
  */
-public abstract class BaseManager<T extends BaseSpace> {
+public abstract class BaseDomainManager<T extends BaseSpace> {
     
     /**
      * Result of adding a space (includes area and scan results)
@@ -50,7 +51,7 @@ public abstract class BaseManager<T extends BaseSpace> {
     // Counter for auto-numbering areas of this type
     private int counter = 0;
     
-    public BaseManager(TavernContext tavern) {
+    public BaseDomainManager(TavernContext tavern) {
         this.tavern = tavern;
         this.spaces = new HashMap<>();
     }

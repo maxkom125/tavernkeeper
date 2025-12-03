@@ -1,9 +1,9 @@
 package maxitoson.tavernkeeper.tavern.upgrades;
 
-import maxitoson.tavernkeeper.tavern.managers.CustomerManager;
-import maxitoson.tavernkeeper.tavern.managers.DiningManager;
-import maxitoson.tavernkeeper.tavern.managers.EconomyManager;
 import maxitoson.tavernkeeper.tavern.managers.TavernContext;
+import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager;
+import maxitoson.tavernkeeper.tavern.managers.domain.DiningManager;
+import maxitoson.tavernkeeper.tavern.managers.system.EconomyManager;
 
 /**
  * Defines tavern upgrade levels with requirements and benefits

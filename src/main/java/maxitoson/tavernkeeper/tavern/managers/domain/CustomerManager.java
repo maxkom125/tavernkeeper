@@ -1,4 +1,4 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern.managers.domain;
 
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.TavernKeeperMod;
@@ -6,6 +6,7 @@ import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.events.CustomerPaymentEvent;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
+import maxitoson.tavernkeeper.tavern.managers.TavernContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

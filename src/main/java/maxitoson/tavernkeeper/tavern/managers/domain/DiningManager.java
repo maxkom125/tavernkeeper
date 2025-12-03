@@ -1,7 +1,8 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern.managers.domain;
 
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.tavern.managers.TavernContext;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
 import maxitoson.tavernkeeper.tavern.spaces.DiningManagerContext;
 import maxitoson.tavernkeeper.tavern.spaces.DiningSpace;
@@ -19,7 +20,7 @@ import java.util.UUID;
  * 
  * Pattern: Manager extends BaseManager, owns Spaces, Spaces own Areas
  */
-public class DiningManager extends BaseManager<DiningSpace> implements DiningManagerContext {
+public class DiningManager extends BaseDomainManager<DiningSpace> implements DiningManagerContext {
     
     // Track which customer is occupying which chair
     private final Map<BlockPos, UUID> occupiedChairs = new HashMap<>();

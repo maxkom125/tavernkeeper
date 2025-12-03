@@ -1,7 +1,8 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern.managers.domain;
 
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.tavern.managers.TavernContext;
 import maxitoson.tavernkeeper.tavern.spaces.SleepingManagerContext;
 import maxitoson.tavernkeeper.tavern.spaces.SleepingSpace;
 import net.minecraft.core.BlockPos;
@@ -14,7 +15,7 @@ import net.minecraft.server.level.ServerLevel;
  * 
  * Pattern: Manager extends BaseManager, owns Spaces, Spaces own Areas
  */
-public class SleepingManager extends BaseManager<SleepingSpace> implements SleepingManagerContext {
+public class SleepingManager extends BaseDomainManager<SleepingSpace> implements SleepingManagerContext {
     
     public SleepingManager(TavernContext tavern) {
         super(tavern);

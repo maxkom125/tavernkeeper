@@ -57,7 +57,12 @@ tavernkeeper/
 ├── tavern/         # Domain logic (DDD architecture)
 │   ├── Tavern.java       # Aggregate root with result objects
 │   ├── TavernCommand.java # Commands for stats/upgrade info
-│   ├── managers/   # DiningManager, ServiceManager, CustomerManager, EconomyManager
+│   ├── managers/   # All managers organized by type
+│   │   ├── domain/    # Domain managers (physical world interaction)
+│   │   │   ├── DiningManager, ServiceManager, SleepingManager, CustomerManager
+│   │   │   ├── BaseManager, TavernContext
+│   │   └── system/    # System managers (meta-game state)
+│   │       └── UpgradeManager, AdvancementManager, EconomyManager
 │   ├── spaces/     # DiningSpace, ServiceSpace, SleepingSpace
 │   ├── furniture/  # Chair, Table, ServiceLectern, ServiceBarrel
 │   ├── economy/    # FoodRequest, Price, CoinRegistry

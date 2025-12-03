@@ -6,21 +6,18 @@ import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.network.NetworkHandler;
 import maxitoson.tavernkeeper.network.SyncAreasPacket;
-import maxitoson.tavernkeeper.tavern.managers.AdvancementManager;
-import maxitoson.tavernkeeper.tavern.managers.BaseManager;
-import maxitoson.tavernkeeper.tavern.managers.CustomerManager;
-import maxitoson.tavernkeeper.tavern.managers.DiningManager;
-import maxitoson.tavernkeeper.tavern.managers.EconomyManager;
-import maxitoson.tavernkeeper.tavern.managers.ServiceManager;
-import maxitoson.tavernkeeper.tavern.managers.SleepingManager;
 import maxitoson.tavernkeeper.tavern.managers.TavernContext;
-import maxitoson.tavernkeeper.tavern.managers.UpgradeManager;
-import maxitoson.tavernkeeper.tavern.managers.CustomerManager.ServiceResult;
+import maxitoson.tavernkeeper.tavern.managers.domain.BaseDomainManager;
+import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager;
+import maxitoson.tavernkeeper.tavern.managers.domain.DiningManager;
+import maxitoson.tavernkeeper.tavern.managers.domain.ServiceManager;
+import maxitoson.tavernkeeper.tavern.managers.domain.SleepingManager;
+import maxitoson.tavernkeeper.tavern.managers.system.AdvancementManager;
+import maxitoson.tavernkeeper.tavern.managers.system.EconomyManager;
+import maxitoson.tavernkeeper.tavern.managers.system.UpgradeManager;
+import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager.ServiceResult;
 import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
-import maxitoson.tavernkeeper.tavern.spaces.DiningSpace;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceSpace;
-import maxitoson.tavernkeeper.tavern.spaces.SleepingSpace;
-import maxitoson.tavernkeeper.tavern.TavernStatistics;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
@@ -166,8 +163,8 @@ public class Tavern extends SavedData implements TavernContext {
      * Create a new dining area and scan for furniture
      * @return AddSpaceResult with area and scan information
      */
-    public BaseManager.AddSpaceResult createDiningArea(String name, BlockPos minPos, BlockPos maxPos) {
-        BaseManager.AddSpaceResult result = diningManager.addSpace(name, minPos, maxPos, level);
+    public BaseDomainManager.AddSpaceResult createDiningArea(String name, BlockPos minPos, BlockPos maxPos) {
+        BaseDomainManager.AddSpaceResult result = diningManager.addSpace(name, minPos, maxPos, level);
         setDirty();
         return result;
     }
@@ -179,8 +176,8 @@ public class Tavern extends SavedData implements TavernContext {
      * Create a new sleeping area and scan for furniture
      * @return AddSpaceResult with area and scan information
      */
-    public BaseManager.AddSpaceResult createSleepingArea(String name, BlockPos minPos, BlockPos maxPos) {
-        BaseManager.AddSpaceResult result = sleepingManager.addSpace(name, minPos, maxPos, level);
+    public BaseDomainManager.AddSpaceResult createSleepingArea(String name, BlockPos minPos, BlockPos maxPos) {
+        BaseDomainManager.AddSpaceResult result = sleepingManager.addSpace(name, minPos, maxPos, level);
         setDirty();
         return result;
     }
@@ -192,8 +189,8 @@ public class Tavern extends SavedData implements TavernContext {
      * Create a new service area and scan for furniture
      * @return AddSpaceResult with area and scan information
      */
-    public BaseManager.AddSpaceResult createServiceArea(String name, BlockPos minPos, BlockPos maxPos) {
-        BaseManager.AddSpaceResult result = serviceManager.addSpace(name, minPos, maxPos, level);
+    public BaseDomainManager.AddSpaceResult createServiceArea(String name, BlockPos minPos, BlockPos maxPos) {
+        BaseDomainManager.AddSpaceResult result = serviceManager.addSpace(name, minPos, maxPos, level);
         setDirty();
         return result;
     }
@@ -222,7 +219,7 @@ public class Tavern extends SavedData implements TavernContext {
         String name = "#" + nextNumber;
         
         // Create the area and get result (includes area + scan result)
-        BaseManager.AddSpaceResult addResult = switch (type) {
+        BaseDomainManager.AddSpaceResult addResult = switch (type) {
             case DINING -> createDiningArea(name, minPos, maxPos);
             case SLEEPING -> createSleepingArea(name, minPos, maxPos);
             case SERVICE -> createServiceArea(name, minPos, maxPos);

@@ -1,6 +1,8 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern.managers.system;
+
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import maxitoson.tavernkeeper.tavern.economy.Price;
+import maxitoson.tavernkeeper.tavern.managers.TavernContext;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 
 import com.mojang.logging.LogUtils;
@@ -18,6 +20,7 @@ import java.util.Random;
  * - (Future) Tracks tavern income, manages menu, dynamic pricing
  * 
  * Pattern: Tavern owns EconomyManager, Customers ask EconomyManager what to order
+ * Category: System Manager (meta-game state, no world interaction)
  */
 public class EconomyManager {
     private static final Logger LOGGER = LogUtils.getLogger();

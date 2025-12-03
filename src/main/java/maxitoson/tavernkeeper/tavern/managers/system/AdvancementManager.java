@@ -1,4 +1,4 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern.managers.system;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.nbt.CompoundTag;
@@ -11,7 +11,8 @@ import java.util.*;
  * Tracks which players have received specific one-time rewards/milestones
  * to prevent duplicate grants after server restarts.
  * 
- * Owned by Tavern.
+ * Pattern: Owned by Tavern
+ * Category: System Manager (meta-game state, no world interaction)
  */
 public class AdvancementManager {
     private static final Logger LOGGER = LogUtils.getLogger();

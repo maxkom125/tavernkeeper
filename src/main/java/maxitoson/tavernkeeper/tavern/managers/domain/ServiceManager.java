@@ -1,7 +1,8 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern.managers.domain;
 
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.tavern.managers.TavernContext;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceManagerContext;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceSpace;
@@ -13,7 +14,7 @@ import net.minecraft.server.level.ServerLevel;
  * Manager that handles all ServiceSpace instances in a tavern
  * Each ServiceSpace represents one SERVICE area
  */
-public class ServiceManager extends BaseManager<ServiceSpace> implements ServiceManagerContext {
+public class ServiceManager extends BaseDomainManager<ServiceSpace> implements ServiceManagerContext {
     
     public ServiceManager(TavernContext tavern) {
         super(tavern);

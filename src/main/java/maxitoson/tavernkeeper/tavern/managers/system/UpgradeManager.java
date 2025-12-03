@@ -1,7 +1,8 @@
-package maxitoson.tavernkeeper.tavern.managers;
+package maxitoson.tavernkeeper.tavern.managers.system;
 
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.events.TavernUpgradedEvent;
+import maxitoson.tavernkeeper.tavern.managers.TavernContext;
 import maxitoson.tavernkeeper.tavern.upgrades.TavernUpgrade;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -13,6 +14,7 @@ import org.slf4j.Logger;
  * Handles checking requirements and applying upgrades to managers
  * 
  * Pattern: Owned by Tavern, queries TavernContext for statistics
+ * Category: System Manager (meta-game state, no world interaction)
  */
 public class UpgradeManager {
     private static final Logger LOGGER = LogUtils.getLogger();
