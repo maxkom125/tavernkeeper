@@ -1,6 +1,7 @@
 package maxitoson.tavernkeeper;
 
 import com.mojang.logging.LogUtils;
+import maxitoson.tavernkeeper.blocks.ReceptionDeskBlock;
 import maxitoson.tavernkeeper.datagen.DataGenerators;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.items.MarkingCane;
@@ -22,7 +23,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
-import net.neoforged.neoforge.common.NeoForge;
+// import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
@@ -59,6 +60,11 @@ public class TavernKeeperMod
     public static final DeferredBlock<Block> EXAMPLE_BLOCK = BLOCKS.registerSimpleBlock("example_block", BlockBehaviour.Properties.of().mapColor(MapColor.STONE));
     // Creates a new BlockItem with the id "tavernkeeper:example_block", combining the namespace and path
     public static final DeferredItem<BlockItem> EXAMPLE_BLOCK_ITEM = ITEMS.registerSimpleBlockItem("example_block", EXAMPLE_BLOCK);
+
+    // Reception Desk block - for sleeping service requests (uses enchanting table texture)
+    public static final DeferredBlock<Block> RECEPTION_DESK = BLOCKS.register("reception_desk", 
+        () -> new ReceptionDeskBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.ENCHANTING_TABLE)));
+    public static final DeferredItem<BlockItem> RECEPTION_DESK_ITEM = ITEMS.registerSimpleBlockItem("reception_desk", RECEPTION_DESK);
 
     // Creates a new food item with the id "tavernkeeper:example_id", nutrition 1 and saturation 2
     public static final DeferredItem<Item> EXAMPLE_ITEM = ITEMS.registerItem("example_item", TavernItem::new, new Item.Properties().food(new FoodProperties.Builder()
@@ -97,6 +103,7 @@ public class TavernKeeperMod
             .icon(() -> MARKING_CANE.get().getDefaultInstance())
             .displayItems((parameters, output) -> {
                 output.accept(MARKING_CANE.get()); // Area selection tool
+                output.accept(RECEPTION_DESK_ITEM.get()); // Reception desk block
                 // Coins in order (lowest to highest tier)
                 output.accept(COPPER_COIN.get());
                 output.accept(IRON_COIN.get());

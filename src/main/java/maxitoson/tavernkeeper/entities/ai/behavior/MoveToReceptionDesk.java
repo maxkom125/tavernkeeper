@@ -3,33 +3,33 @@ package maxitoson.tavernkeeper.entities.ai.behavior;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.tavern.TavernContext;
-import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
+import maxitoson.tavernkeeper.tavern.furniture.ServiceReceptionDesk;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.Optional;
 
 /**
- * Moves food customers to the nearest lectern in a service area
- * After reaching lectern, transitions to WAITING_SERVICE state
+ * Moves sleeping customers to the nearest reception desk in a service area
+ * After reaching reception, transitions to WAITING_RECEPTION state
  */
-public class MoveToLectern extends MoveToTargetBehavior {
+public class MoveToReceptionDesk extends MoveToTargetBehavior {
     private static final int REACHED_DISTANCE = 2;
     
-    public MoveToLectern(float speedModifier) {
+    public MoveToReceptionDesk(float speedModifier) {
         super(speedModifier);
     }
     
     @Override
     protected boolean isInCorrectState(CustomerEntity customer) {
-        // Only for customers looking for lectern
-        return customer.getCustomerState() == CustomerState.FINDING_LECTERN;
+        // Only for customers looking for reception desk
+        return customer.getCustomerState() == CustomerState.FINDING_RECEPTION;
     }
     
     @Override
     protected Optional<BlockPos> findTarget(TavernContext tavern, BlockPos from, double maxDistance) {
-        return tavern.findNearestLectern(from, maxDistance)
-                     .map(ServiceLectern::getPosition);
+        return tavern.findNearestReceptionDesk(from, maxDistance)
+                     .map(ServiceReceptionDesk::getPosition);
     }
     
     @Override
@@ -40,7 +40,7 @@ public class MoveToLectern extends MoveToTargetBehavior {
     
     @Override
     protected String getTargetName() {
-        return "lectern";
+        return "reception desk";
     }
     
     @Override
@@ -48,3 +48,4 @@ public class MoveToLectern extends MoveToTargetBehavior {
         return REACHED_DISTANCE;
     }
 }
+

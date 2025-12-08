@@ -105,7 +105,7 @@ public class Leave extends Behavior<CustomerEntity> {
                 MemoryModuleType.WALK_TARGET,
                 new WalkTarget(targetVec, WALK_SPEED, REACHED_SPAWN_DISTANCE)
             );
-            LOGGER.debug("Customer {} re-targeting spawn position during tick", customer.getId());
+            // LOGGER.debug("Customer {} re-targeting spawn position during tick", customer.getId());
         }
     }
     

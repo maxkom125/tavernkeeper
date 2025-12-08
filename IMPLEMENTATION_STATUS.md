@@ -74,27 +74,24 @@ tavernkeeper/
 ### 7. **Furniture Recognition**
 - **Real-time updates**: Detects furniture when placed/broken
 - **Dining Areas**: Stairs (Chairs) + Upside-down Stairs (Tables)
-- **Sleeping Areas**: Beds
-- **Service Areas**: Lecterns (Queue points) + Barrels (recognized but not used yet)
+- **Sleeping Areas**: Beds (with reservation system)
+- **Service Areas**: Lecterns (food service) + Reception Desks (sleeping service)
 - **Optimized**: Only updates specific block position, no full rescans
 - **Smart validation**: Chairs must face tables and have air block above to be valid
+- **Reservation System**: Prevents multiple customers from targeting same chair/bed
 
 ### 8. **Customer System** ✨
-- **Service Areas**: Reception desks with lecterns (barrels optional decoration)
+- **Service Areas**: Lecterns (food ordering) and Reception Desks (sleeping requests)
 - **Raid-Style Spawning**: Uses Minecraft's native spawning mechanics
   - Multi-phase spawn attempts (20 per cycle)
   - Circular positioning around tavern center
   - World surface height detection
   - Full spawn validation
-- **Customer AI Lifecycle**:
-  1. Spawn near tavern
-  2. Walk to lectern and queue
-  3. Show food request (item above head + custom coin in hand)
-  4. Player serves requested food (right-click with food in hand)
-  5. Customer pays (gives coins)
-  6. Walk to available chair
-  7. Sit and eat food
-  8. Leave and despawn
+- **Customer Lifecycle System**: Three journey types
+  - **Dining Only**: Lectern → Food → Chair → Eat → Leave
+  - **Sleeping Only**: Reception → Pay → Bed → Sleep → Leave (morning)
+  - **Full Service**: Lectern → Food → Chair → Eat → Reception → Pay → Bed → Sleep → Leave
+- **Smart AI**: State-based behavior system
 
 ### 9. **Tavern Open/Closed State** 🚪
 - **Tavern Sign**: Designate any sign as your tavern sign
@@ -132,6 +129,11 @@ tavernkeeper/
 - `/tavern stats` - View owner, status, and statistics
 - `/tavern upgrade` - View current level and next requirements
 - `/tavern adjust` - Manual adjustments (money, reputation) for testing
+
+### 15. **Sleeping System** 🛏️
+- **Reception Desk**: Custom block for sleeping service
+- **Payment First**: Customers pay at reception before going to bed
+- **Sleep Until Morning**: Customers wake up at dawn (6 AM game time)
 
 ---
 
@@ -236,7 +238,7 @@ Nothing!
 |------|-------|---------|-------------------|
 | **Dining** | Yellow | Eating area | Tables + Chairs (facing tables) |
 | **Sleeping** | Blue | Rest area | Beds |
-| **Service** | Green | Reception | Lecterns (barrels optional) |
+| **Service** | Green | Reception | Lecterns (food) + Reception Desks (sleeping) |
 
 ### Counter System
 ```java

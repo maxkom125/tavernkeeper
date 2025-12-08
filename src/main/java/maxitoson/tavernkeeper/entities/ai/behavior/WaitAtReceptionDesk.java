@@ -3,7 +3,7 @@ package maxitoson.tavernkeeper.entities.ai.behavior;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
-import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
+import maxitoson.tavernkeeper.tavern.economy.SleepingRequest;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
@@ -14,51 +14,48 @@ import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 
 /**
- * Behavior for customer waiting at lectern for service
+ * Behavior for customer waiting at reception desk to pay for sleeping
+ * Similar to WaitAtLectern but for sleeping requests
  */
-public class WaitAtLectern extends Behavior<CustomerEntity> {
+public class WaitAtReceptionDesk extends Behavior<CustomerEntity> {
     private static final Logger LOGGER = LogUtils.getLogger();
     
-    public WaitAtLectern() {
+    public WaitAtReceptionDesk() {
         // No memory requirements, no time limit
         super(ImmutableMap.of(), Integer.MAX_VALUE); // Run indefinitely
     }
     
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, CustomerEntity customer) {
-        // Only run if customer is waiting for service
-        return customer.getCustomerState() == CustomerState.WAITING_SERVICE;
+        // Only run if customer is waiting at reception
+        return customer.getCustomerState() == CustomerState.WAITING_RECEPTION;
     }
     
     @Override
     protected boolean canStillUse(ServerLevel level, CustomerEntity customer, long gameTime) {
-        // Keep waiting while in WAITING_SERVICE state
-        return customer.getCustomerState() == CustomerState.WAITING_SERVICE;
+        // Keep waiting while in WAITING_RECEPTION state
+        return customer.getCustomerState() == CustomerState.WAITING_RECEPTION;
     }
     
     @Override
     protected void start(ServerLevel level, CustomerEntity customer, long gameTime) {
-        // Get food request from tavern -> economy manager
+        // Get sleeping request from tavern -> economy manager
         TavernContext tavern = Tavern.get(level);
-        FoodRequest request = tavern.createFoodRequest();
+        SleepingRequest request = tavern.createSleepingRequest();
         customer.setRequest(request);
         
-        // Set rendered items using request data
+        // Hold money in hand (no item on head)
         customer.setItemSlot(EquipmentSlot.MAINHAND, request.getPrice().toHighestTierStack());
-        customer.setItemSlot(EquipmentSlot.HEAD, 
-            new ItemStack(request.getRequestedItem(), request.getRequestedAmount()));
         
-        LOGGER.info("Customer {} waiting at lectern for {} (holding {}, showing {} above head)", 
-            customer.getId(), request.getDisplayName(), 
-            request.getPrice().getDisplayName(), request.getDisplayName());
+        LOGGER.info("Customer {} waiting at reception desk for sleeping (holding {})", 
+            customer.getId(), request.getPrice().getDisplayName());
     }
     
     @Override
     protected void stop(ServerLevel level, CustomerEntity customer, long gameTime) {
         // Remove items
         customer.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-        customer.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
-        LOGGER.debug("Customer {} stopped waiting at lectern", customer.getId());
+        LOGGER.debug("Customer {} stopped waiting at reception desk", customer.getId());
     }
 }
 

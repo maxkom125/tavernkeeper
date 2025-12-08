@@ -6,9 +6,9 @@ A Minecraft mod that lets you run your own tavern! Mark areas, serve customers, 
 
 Run a fully functional tavern in Minecraft:
 - **Mark areas** with a special tool (Dining, Sleeping, Service)
-- **Customers spawn** and come to your tawern to request food
+- **Customers spawn** and come to your tavern to request food or a shelter for the night
 - **Serve them** and get paid
-- **Watch them eat** at your tables before leaving
+- **Watch them eat** at your tables or sleep in beds before leaving
 
 ## Mod content
 
@@ -18,7 +18,8 @@ Run a fully functional tavern in Minecraft:
 3. **Auto-saved**: "Saved Dining Area #3 (250 blocks)"
 4. **Place Furniture**:
    - Dining: Place upside-down stairs (tables) + stairs facing tables (chairs)
-   - Service: Place lecterns (queue points) - barrels are optional decoration
+   - Sleeping: Place beds for customers to sleep overnight
+   - Service: Place lecterns (food orders) + reception desks (room bookings)
 5. **Set Tavern Sign**: Hold cane → Right-click any sign → Designates tavern sign
 6. **Toggle Open/Closed**: Right-click tavern sign (empty hand) → Controls customer spawning
 7. **See Areas**: Hold cane → All areas visible (colored boxes)

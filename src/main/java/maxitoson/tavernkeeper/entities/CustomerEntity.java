@@ -6,7 +6,14 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Dynamic;
 import maxitoson.tavernkeeper.entities.ai.behavior.CustomerGoalPackages;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
+import maxitoson.tavernkeeper.entities.ai.LifecycleType;
+import maxitoson.tavernkeeper.entities.ai.lifecycle.CustomerLifecycle;
+import maxitoson.tavernkeeper.entities.ai.lifecycle.CustomerLifecycleFactory;
+import maxitoson.tavernkeeper.tavern.Tavern;
+import maxitoson.tavernkeeper.tavern.TavernContext;
+import maxitoson.tavernkeeper.tavern.economy.CustomerRequest;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
+import maxitoson.tavernkeeper.tavern.economy.SleepingRequest;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
@@ -40,11 +47,13 @@ public class CustomerEntity extends AbstractVillager {
     public static final double MAX_HEALTH = 20.0;    // Health points
     public static final double FOLLOW_RANGE = 48.0;  // How far entity can detect targets
     
-    // Customer state tracking
-    private CustomerState customerState = CustomerState.FINDING_QUEUE;
+    private CustomerLifecycle lifecycle = null; // Manages customer's journey through tavern
+    
+    // Customer state tracking (lifecycle will set correct initial state)
+    private CustomerState customerState = CustomerState.LEAVING;
     private CustomerState stateBeforePanic = null;
-    private net.minecraft.core.BlockPos targetPosition = null; // Target position (lectern or chair)
-    private FoodRequest foodRequest = null; // What food customer wants
+    private net.minecraft.core.BlockPos targetPosition = null; // Target position (lectern, reception desk, chair, or bed)
+    private CustomerRequest request = null; // Customer's current request (food, sleeping, etc.)
     private net.minecraft.core.BlockPos spawnPosition = null; // Where customer spawned (for returning when leaving)
     
     // Panic tracking - cumulative total time across all panic episodes
@@ -211,7 +220,7 @@ public class CustomerEntity extends AbstractVillager {
      */
     private void decreaseReputationAndNotify(int reputationChange, String message) {
         if (this.level() instanceof ServerLevel serverLevel) {
-            maxitoson.tavernkeeper.tavern.TavernContext tavern = maxitoson.tavernkeeper.tavern.Tavern.get(serverLevel);
+            TavernContext tavern = Tavern.get(serverLevel);
             if (tavern != null) {
                 tavern.adjustReputation(reputationChange);
                 
@@ -237,13 +246,65 @@ public class CustomerEntity extends AbstractVillager {
         return stateBeforePanic;
     }
     
-    // Food request management
-    public FoodRequest getFoodRequest() {
-        return foodRequest;
+    // Request management - unified interface for all request types
+    public CustomerRequest getRequest() {
+        return request;
     }
     
-    public void setFoodRequest(FoodRequest request) {
-        this.foodRequest = request;
+    public void setRequest(CustomerRequest request) {
+        this.request = request;
+    }
+    
+    // Type-safe convenience getters (return null if wrong type)
+    public FoodRequest getFoodRequest() {
+        return request instanceof FoodRequest ? (FoodRequest) request : null;
+    }
+    
+    public SleepingRequest getSleepingRequest() {
+        return request instanceof SleepingRequest ? (SleepingRequest) request : null;
+    }
+    
+    // Customer type management - derived from lifecycle (single source of truth)
+    /**
+     * Get customer type - derived from lifecycle
+     * Returns DINING_ONLY as default if no lifecycle is set
+     */
+    public LifecycleType getLifecycleType() {
+        return lifecycle != null ? lifecycle.getType() : LifecycleType.DINING_ONLY;
+    }
+    
+    // Lifecycle management (brain-like layer)
+    public CustomerLifecycle getLifecycle() {
+        return lifecycle;
+    }
+    
+    /**
+     * Set the customer's lifecycle - determines their entire journey
+     * This should be called once at spawn time
+     */
+    public void setLifecycle(CustomerLifecycle lifecycle) {
+        this.lifecycle = lifecycle;
+        this.customerState = lifecycle.getInitialState();
+        LOGGER.info("Customer {} assigned lifecycle: {} ({})", 
+            this.getId(), lifecycle.getType(), lifecycle.getDescription());
+    }
+    
+    /**
+     * Transition to the next state based on lifecycle rules
+     * Call this when a state completes (e.g., finished eating, woke up)
+     */
+    public void transitionToNextState(net.minecraft.server.level.ServerLevel level) {
+        if (lifecycle == null) {
+            LOGGER.error("Customer {} has no lifecycle, defaulting to LEAVING", this.getId());
+            setCustomerState(CustomerState.LEAVING);
+            return;
+        }
+        
+        CustomerState currentState = this.customerState;
+        CustomerState nextState = lifecycle.getNextState(currentState, level);
+        
+        setCustomerState(nextState);
+        LOGGER.debug("Customer {} transitioned from {} to {}", this.getId(), currentState, nextState);
     }
     
     // Spawn position management
@@ -269,6 +330,11 @@ public class CustomerEntity extends AbstractVillager {
         
         // Save customer state
         tag.putString("CustomerState", this.customerState.name());
+        
+        // Save lifecycle type (to recreate lifecycle on load)
+        if (this.lifecycle != null) {
+            tag.putString("LifecycleType", this.lifecycle.getType().name());
+        }
         
         // Save target position if exists
         if (this.targetPosition != null) {
@@ -301,8 +367,33 @@ public class CustomerEntity extends AbstractVillager {
             try {
                 this.customerState = CustomerState.valueOf(tag.getString("CustomerState"));
             } catch (IllegalArgumentException e) {
-                LOGGER.warn("Invalid customer state in NBT: {}", tag.getString("CustomerState"));
-                this.customerState = CustomerState.FINDING_QUEUE;
+                LOGGER.warn("Invalid customer state in NBT: {}, defaulting to LEAVING", tag.getString("CustomerState"));
+                this.customerState = CustomerState.LEAVING;
+            }
+        }
+        
+        // Load and recreate lifecycle from type
+        if (tag.contains("LifecycleType")) {
+            try {
+                LifecycleType type = LifecycleType.valueOf(tag.getString("LifecycleType"));
+                this.lifecycle = CustomerLifecycleFactory.fromType(type);
+                LOGGER.debug("Recreated lifecycle {} for customer {}", type, this.getId());
+            } catch (IllegalArgumentException e) {
+                LOGGER.warn("Invalid lifecycle type in NBT: {}, defaulting to DINING_ONLY", 
+                    tag.getString("LifecycleType"));
+                this.lifecycle = CustomerLifecycleFactory.fromType(LifecycleType.DINING_ONLY);
+            }
+        } else if (tag.contains("CustomerType")) {
+            // Backward compatibility: old saves have CustomerType instead of LifecycleType
+            // TODO: Remove this in the next commit
+            try {
+                LifecycleType type = LifecycleType.valueOf(tag.getString("CustomerType"));
+                this.lifecycle = CustomerLifecycleFactory.fromType(type);
+                LOGGER.debug("Migrated old CustomerType {} to lifecycle for customer {}", type, this.getId());
+            } catch (IllegalArgumentException e) {
+                LOGGER.warn("Invalid customer type in NBT: {}, defaulting to DINING_ONLY", 
+                    tag.getString("CustomerType"));
+                this.lifecycle = CustomerLifecycleFactory.fromType(LifecycleType.DINING_ONLY);
             }
         }
         
@@ -336,6 +427,35 @@ public class CustomerEntity extends AbstractVillager {
         }
     }
     
+    // Similar to Villager.startSleeping() (line 939-944)
+    @Override
+    public void startSleeping(net.minecraft.core.BlockPos pos) {
+        super.startSleeping(pos);
+        // Note: We don't track LAST_SLEPT memory like Villagers do
+        // Clear walk target to prevent movement while sleeping
+        this.brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+    }
+    
+    // Similar to Villager.stopSleeping() (line 946-949)
+    @Override
+    public void stopSleeping() {
+        super.stopSleeping();
+        // Note: We don't track LAST_WOKEN memory like Villagers do
+        
+        // If bed was broken (not a normal wake-up), transition customer to appropriate state
+        if (this.getCustomerState() == CustomerState.SLEEPING) {
+            // Bed was broken while sleeping - need to find a new bed or leave
+            if (this.getLifecycle() != null) {
+                // Go back to finding bed state
+                this.setCustomerState(CustomerState.FINDING_BED);
+                LOGGER.info("Customer {} woken up by bed breaking, looking for new bed", this.getId());
+            } else {
+                this.setCustomerState(CustomerState.LEAVING);
+            }
+        }
+    }
+    
     /**
      * Determine what state to transition to after panic, based on saved state
      * This centralizes the state transition logic for easier maintenance
@@ -343,15 +463,23 @@ public class CustomerEntity extends AbstractVillager {
     public CustomerState getStateAfterPanic() {
         CustomerState savedState = getStateBeforePanic();
         if (savedState == null) {
-            return CustomerState.FINDING_QUEUE;
+            // No saved state - return to lifecycle's initial state
+            LOGGER.warn("Customer {} has no saved state, defaulting to {}", this.getId(), CustomerState.LEAVING);
+            return lifecycle != null ? lifecycle.getInitialState() : CustomerState.LEAVING;
         }
         
         return switch (savedState) {
             // Customer was finding or waiting at lectern → go back to finding lectern
-            case FINDING_QUEUE, WAITING_SERVICE -> CustomerState.FINDING_QUEUE;
+            case FINDING_LECTERN, WAITING_SERVICE -> CustomerState.FINDING_LECTERN;
+            
+            // Customer was finding or waiting at reception → go back to finding reception
+            case FINDING_RECEPTION, WAITING_RECEPTION -> CustomerState.FINDING_RECEPTION;
             
             // Customer was finding or eating at chair → go back to finding chair
             case FINDING_SEAT, EATING -> CustomerState.FINDING_SEAT;
+            
+            // Customer was finding bed or sleeping → go back to finding bed
+            case FINDING_BED, SLEEPING -> CustomerState.FINDING_BED;
             
             // Customer was leaving → continue leaving
             case LEAVING -> CustomerState.LEAVING;

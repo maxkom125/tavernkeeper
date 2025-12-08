@@ -3,33 +3,41 @@ package maxitoson.tavernkeeper.entities.ai.behavior;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.tavern.TavernContext;
-import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.Optional;
 
 /**
- * Moves food customers to the nearest lectern in a service area
- * After reaching lectern, transitions to WAITING_SERVICE state
+ * Finds and walks to the nearest available bed in a sleeping area
+ * After reaching bed, transitions to SLEEPING state
+ * Reserves the bed to prevent other customers from taking it
  */
-public class MoveToLectern extends MoveToTargetBehavior {
+public class FindBed extends MoveToTargetBehavior {
     private static final int REACHED_DISTANCE = 2;
     
-    public MoveToLectern(float speedModifier) {
+    public FindBed(float speedModifier) {
         super(speedModifier);
     }
     
     @Override
     protected boolean isInCorrectState(CustomerEntity customer) {
-        // Only for customers looking for lectern
-        return customer.getCustomerState() == CustomerState.FINDING_LECTERN;
+        return customer.getCustomerState() == CustomerState.FINDING_BED;
     }
     
     @Override
     protected Optional<BlockPos> findTarget(TavernContext tavern, BlockPos from, double maxDistance) {
-        return tavern.findNearestLectern(from, maxDistance)
-                     .map(ServiceLectern::getPosition);
+        return tavern.findNearestAvailableBed(from, maxDistance);
+    }
+    
+    @Override
+    protected boolean tryReserveTarget(TavernContext tavern, BlockPos target, CustomerEntity customer) {
+        return tavern.reserveBed(target, customer.getUUID());
+    }
+    
+    @Override
+    protected void releaseTarget(TavernContext tavern, BlockPos target) {
+        tavern.releaseBed(target);
     }
     
     @Override
@@ -40,7 +48,7 @@ public class MoveToLectern extends MoveToTargetBehavior {
     
     @Override
     protected String getTargetName() {
-        return "lectern";
+        return "bed";
     }
     
     @Override

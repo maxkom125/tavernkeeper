@@ -9,6 +9,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.core.Direction;
 
 import com.mojang.logging.LogUtils;
@@ -51,10 +52,14 @@ public class SleepingSpace extends BaseSpace {
             BlockState state = level.getBlockState(pos);
             Block block = state.getBlock();
             
-            // Check if it's a bed block
+            // Check if it's a bed block - only add HEAD part (not FOOT)
+            // This ensures each physical bed is counted once
             if (block instanceof BedBlock) {
-                beds.add(pos.immutable());
-                LOGGER.debug("Found existing bed at {}", pos);
+                BedPart part = state.getValue(BedBlock.PART);
+                if (part == BedPart.HEAD) {
+                    beds.add(pos.immutable());
+                    LOGGER.debug("Found bed HEAD at {}", pos);
+                }
             }
         }
         LOGGER.info("Scanned SleepingSpace {}: Found {} beds", area.getName(), beds.size());
@@ -65,23 +70,29 @@ public class SleepingSpace extends BaseSpace {
     public void onBlockUpdated(BlockPos pos, BlockState state) {
         LOGGER.debug("SleepingSpace {} updating block at {}. State: {}", area.getName(), pos, state);
         
-        // Remove existing bed if any
+        // Remove existing bed if any (might be either HEAD or FOOT position)
+        // When a bed is placed/broken, we need to handle both parts
         if (beds.remove(pos)) {
-             LOGGER.debug("Removed bed part at {}", pos);
+             LOGGER.debug("Removed bed at {}", pos);
         }
         
-        // Add if it's a bed
+        // Add if it's a bed - but ONLY if it's the HEAD part
+        // This ensures each physical bed is stored once at the HEAD position
         if (state.getBlock() instanceof BedBlock) {
-            beds.add(pos.immutable());
-            LOGGER.debug("Added bed part at {}", pos);
+            BedPart part = state.getValue(BedBlock.PART);
             
-            // Also add the connected part (Head/Foot)
-            // Because placing a bed places both, but event might only fire for one
-            Direction direction = BedBlock.getConnectedDirection(state);
-            BlockPos otherPartPos = pos.relative(direction);
-            if (!beds.contains(otherPartPos)) {
-                beds.add(otherPartPos.immutable());
-                LOGGER.debug("Added connected bed part at {}", otherPartPos);
+            if (part == BedPart.HEAD) {
+                // This is the HEAD - store it
+                beds.add(pos.immutable());
+                LOGGER.debug("Added bed HEAD at {}", pos);
+            } else {
+                // This is the FOOT - find and store the HEAD position instead
+                Direction direction = BedBlock.getConnectedDirection(state);
+                BlockPos headPos = pos.relative(direction);
+                if (!beds.contains(headPos)) {
+                    beds.add(headPos.immutable());
+                    LOGGER.debug("Added bed HEAD at {} (from FOOT at {})", headPos, pos);
+                }
             }
         }
         LOGGER.debug("SleepingSpace {} now has {} beds", area.getName(), beds.size());
@@ -89,18 +100,28 @@ public class SleepingSpace extends BaseSpace {
     
     @Override
     public void onBlockBroken(BlockPos pos, BlockState oldState) {
-        // Remove the broken block
-        if (beds.remove(pos)) {
-            LOGGER.debug("Broken bed part removed at {}", pos);
-        }
-        
-        // If it was a bed, remove the connected part too
+        // When a bed is broken, remove the HEAD position from our list
+        // (since we only store HEAD positions, not FOOT)
         if (oldState.getBlock() instanceof BedBlock) {
-            Direction direction = BedBlock.getConnectedDirection(oldState);
-            BlockPos otherPartPos = pos.relative(direction);
-            if (beds.remove(otherPartPos)) {
-                LOGGER.debug("Connected bed part removed at {}", otherPartPos);
+            BedPart part = oldState.getValue(BedBlock.PART);
+            
+            if (part == BedPart.HEAD) {
+                // Broken block is HEAD - remove it directly
+                if (beds.remove(pos)) {
+                    LOGGER.debug("Broken bed HEAD removed at {}", pos);
+                }
+            } else {
+                // Broken block is FOOT - find and remove the HEAD position
+                Direction direction = BedBlock.getConnectedDirection(oldState);
+                BlockPos headPos = pos.relative(direction);
+                if (beds.remove(headPos)) {
+                    LOGGER.debug("Broken bed HEAD removed at {} (FOOT broken at {})", headPos, pos);
+                }
             }
+        } else {
+            // Not a bed, just remove position (shouldn't happen, but safe fallback)
+            LOGGER.warn("SleepingSpace {} broken block at {} is not a bed", area.getName(), pos);
+            beds.remove(pos);
         }
         LOGGER.debug("SleepingSpace {} now has {} beds", area.getName(), beds.size());
     }

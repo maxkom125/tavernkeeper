@@ -2,9 +2,11 @@ package maxitoson.tavernkeeper.events;
 
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
+import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.items.MarkingCane;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.tavern.Tavern.ToggleResult;
+import maxitoson.tavernkeeper.tavern.economy.CustomerRequest;
 import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager.ServiceResult;
 import maxitoson.tavernkeeper.tavern.utils.SignHelper;
 import net.minecraft.network.chat.Component;
@@ -110,8 +112,8 @@ public class PlayerInteractionHandler {
     }
     
     /**
-     * Handle player right-clicking customer to serve them food.
-     * Delegates to CustomerManager for business logic, handles UI display.
+     * Handle player right-clicking customer to serve them or accept sleeping payment.
+     * UI layer: Routes to manager and displays feedback based on result.
      */
     @SubscribeEvent
     public static void onPlayerInteractEntity(PlayerInteractEvent.EntityInteract event) {
@@ -121,26 +123,28 @@ public class PlayerInteractionHandler {
             Player player = event.getEntity();
             ItemStack heldItem = player.getItemInHand(event.getHand());
             net.minecraft.server.level.ServerLevel serverLevel = (net.minecraft.server.level.ServerLevel) event.getLevel();
-            
-            // Delegate to Tavern for all business logic
             Tavern tavern = Tavern.get(serverLevel);
+            
+            // Delegate to manager for business logic (handles both food and sleeping)
             ServiceResult result = tavern.handlePlayerServe(player, customer, heldItem);
             
-            // UI layer interprets result and displays appropriate feedback
+            // UI layer: Display feedback based on result
             if (result.shouldShowFeedback()) {
+                CustomerRequest request = result.getRequest();
+                
                 if (result.isSuccess()) {
-                    // Success - show what was served and payment
-                    player.displayClientMessage(
-                        Component.literal("Served customer " + result.getRequest().getDisplayName() + 
-                                        "! +" + result.getRequest().getPrice().getDisplayName()),
-                        true
-                    );
+                    // Success - show what was served/accepted and payment
+                    String message = customer.getCustomerState() == CustomerState.FINDING_SEAT 
+                        ? "Served customer " + request.getDisplayName() + "! +" + request.getPrice().getDisplayName()
+                        : "Received " + request.getPrice().getDisplayName() + " for " + request.getDisplayName() + "!";
+                    
+                    player.displayClientMessage(Component.literal(message), true);
                     customer.playSound(SoundEvents.VILLAGER_YES, 1.0F, 1.0F);
                     player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.0F);
                 } else {
                     // Wrong food - show what customer wants
                     player.displayClientMessage(
-                        Component.literal("Customer wants " + result.getRequest().getDisplayName() + "!"),
+                        Component.literal("Customer wants " + request.getDisplayName() + "!"),
                         true
                     );
                     customer.playSound(SoundEvents.VILLAGER_NO, 1.0F, 1.0F);

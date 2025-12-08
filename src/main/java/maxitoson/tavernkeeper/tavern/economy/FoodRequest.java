@@ -7,7 +7,7 @@ import net.minecraft.world.item.ItemStack;
  * Represents a customer's food request with pricing
  * Contains item, amount, and payment information
  */
-public class FoodRequest {
+public class FoodRequest implements CustomerRequest {
     private final Item requestedItem;
     private final int requestedAmount;
     private final Price price;
@@ -26,6 +26,7 @@ public class FoodRequest {
         return requestedAmount;
     }
     
+    @Override
     public Price getPrice() {
         return price;
     }
@@ -40,6 +41,7 @@ public class FoodRequest {
     /**
      * Get display name for chat messages
      */
+    @Override
     public String getDisplayName() {
         return requestedAmount + " " + requestedItem.getDescription().getString();
     }

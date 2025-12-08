@@ -37,24 +37,38 @@ public class CustomerGoalPackages {
     /**
      * Idle behaviors - default activity when not doing anything specific
      * Similar to VillagerGoalPackages.getIdlePackage() (line 68-70)
-     * Customer lifecycle: Find Queue -> Wait for Service -> Find Seat -> Eat -> Leave
+     * Customer lifecycle:
+     *   FOOD: Find Queue -> Wait at Lectern -> Find Seat -> Eat -> Leave
+     *   SLEEPING: Find Queue -> Wait at Reception -> Find Bed -> Sleep -> Leave
      */
     public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super CustomerEntity>>> getIdlePackage(float speedModifier) {
         return ImmutableList.of(
-            // Priority 0: Move to lectern to order food (only if FINDING_QUEUE)
+            // Priority 0a: Move to lectern for food customers (only if FINDING_LECTERN)
             Pair.of(0, new MoveToLectern(speedModifier)),
+            
+            // Priority 0b: Move to reception desk for sleeping customers (only if FINDING_RECEPTION)
+            Pair.of(0, new MoveToReceptionDesk(speedModifier)),
             
             // Priority 1: Wait at lectern and show food request (only if WAITING_SERVICE)
             Pair.of(1, new WaitAtLectern()),
             
-            // Priority 2: Find and walk to a chair after being served (only if FINDING_SEAT)
-            Pair.of(2, new FindSeat(speedModifier)),
+            // Priority 2: Wait at reception desk and hold money (only if WAITING_RECEPTION)
+            Pair.of(2, new WaitAtReceptionDesk()),
             
-            // Priority 3: Sit at chair and eat food (only if EATING)
-            Pair.of(3, new EatAtChair()),
+            // Priority 3: Find and walk to a chair after being served (only if FINDING_SEAT)
+            Pair.of(3, new FindSeat(speedModifier)),
             
-            // Priority 4: Walk away and despawn (only if LEAVING)
-            Pair.of(4, new Leave())
+            // Priority 4: Sit at chair and eat food (only if EATING)
+            Pair.of(4, new EatAtChair()),
+            
+            // Priority 5: Find and walk to a bed (only if FINDING_BED)
+            Pair.of(5, new FindBed(speedModifier)),
+            
+            // Priority 6: Lie in bed and sleep (only if SLEEPING)
+            Pair.of(6, new SleepInBed()),
+            
+            // Priority 7: Walk away and despawn (only if LEAVING)
+            Pair.of(7, new Leave())
         );
     }
     

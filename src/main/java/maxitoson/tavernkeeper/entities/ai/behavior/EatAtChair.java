@@ -5,6 +5,7 @@ import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.tavern.Tavern;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -56,10 +57,29 @@ public class EatAtChair extends Behavior<CustomerEntity> {
     @Override
     protected void start(ServerLevel level, CustomerEntity customer, long gameTime) {
         BlockPos chairPos = customer.getTargetPosition();
+        TavernContext tavern = Tavern.get(level);
         
         if (chairPos == null) {
             LOGGER.warn("Customer {} in EATING state but no target chair position!", customer.getId());
             customer.setCustomerState(CustomerState.LEAVING);
+            return;
+        }
+        
+        // Verify the chair still exists and is reserved by this customer
+        // (prevents another customer from taking it during panic/interruption)
+        if (!tavern.hasChairAt(chairPos)) {
+            LOGGER.warn("Customer {} chair at {} no longer exists, transitioning to FINDING_SEAT", 
+                customer.getId(), chairPos);
+            customer.setTargetPosition(null);
+            customer.setCustomerState(CustomerState.FINDING_SEAT);
+            return;
+        }
+        
+        if (!tavern.isChairReservedBy(chairPos, customer.getUUID())) {
+            LOGGER.warn("Customer {} chair at {} is no longer reserved by them (taken by another customer?), transitioning to FINDING_SEAT", 
+                customer.getId(), chairPos);
+            customer.setTargetPosition(null);
+            customer.setCustomerState(CustomerState.FINDING_SEAT);
             return;
         }
         
@@ -108,23 +128,40 @@ public class EatAtChair extends Behavior<CustomerEntity> {
     @Override
     protected void stop(ServerLevel level, CustomerEntity customer, long gameTime) {
         BlockPos chairPos = customer.getTargetPosition();
+        TavernContext tavern = Tavern.get(level);
+        
+        // Check if chair still exists (asks tavern instead of checking block types)
+        boolean chairExists = chairPos != null && tavern.hasChairAt(chairPos);
         
         // Release the chair reservation
-        if (chairPos != null) {
-            Tavern.get(level).releaseChair(chairPos);
+        if (chairExists) {
+            tavern.releaseChair(chairPos);
             LOGGER.info("Customer {} finished eating, released chair at {}", 
                 customer.getId(), chairPos);
         }
         
         // Check if we completed the eating duration
         if (startTime > 0 && (gameTime - startTime) >= EATING_DURATION) {
-            // Finished eating normally, transition to LEAVING
-            customer.setCustomerState(CustomerState.LEAVING);
-            LOGGER.info("Customer {} finished eating, now leaving", customer.getId());
+            // Finished eating normally, use lifecycle to determine next state
+            if (customer.getLifecycle() != null) {
+                customer.transitionToNextState(level);
+                LOGGER.info("Customer {} finished eating, transitioning via lifecycle", customer.getId());
+            } else {
+                // Fallback if no lifecycle
+                customer.setCustomerState(CustomerState.LEAVING);
+                LOGGER.error("Customer {} has no lifecycle, defaulting to LEAVING", customer.getId());
+            }
         } else {
-            // Interrupted (e.g., by panic), stay in current state
-            LOGGER.debug("Customer {} eating interrupted at {} ticks", 
-                customer.getId(), gameTime - startTime);
+            // Interrupted (e.g., by panic or chair destroyed)
+            if (!chairExists) {
+                // Chair was destroyed, go find another one
+                customer.setCustomerState(CustomerState.FINDING_SEAT);
+                LOGGER.info("Customer {} chair was destroyed, searching for another seat", customer.getId());
+            } else {
+                // Other interruption (panic, damage), stay in current state
+                LOGGER.debug("Customer {} eating interrupted at {} ticks", 
+                    customer.getId(), gameTime - startTime);
+            }
         }
         
         // Clear target position

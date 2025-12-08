@@ -2,6 +2,7 @@ package maxitoson.tavernkeeper.tavern.managers.system;
 
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import maxitoson.tavernkeeper.tavern.economy.Price;
+import maxitoson.tavernkeeper.tavern.economy.SleepingRequest;
 import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 
@@ -93,6 +94,20 @@ public class EconomyManager {
      */
     public float getPaymentMultiplierValue() {
         return paymentMultiplier;
+    }
+    
+    /**
+     * Generate a sleeping request for a customer
+     * Payment is 5-10 iron coins
+     */
+    public SleepingRequest createSleepingRequest() {
+        // Random price between 5-10 iron coins
+        int ironAmount = 5 + random.nextInt(6); // 5-10 inclusive
+        Price price = new Price(TavernKeeperMod.IRON_COIN.get(), ironAmount);
+        
+        SleepingRequest request = new SleepingRequest(price);
+        LOGGER.debug("Created sleeping request for {}", price.getDisplayName());
+        return request;
     }
 }
 

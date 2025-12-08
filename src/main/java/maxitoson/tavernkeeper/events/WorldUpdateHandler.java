@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.tavern.Tavern;
+import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.utils.SignHelper;
 import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -95,7 +96,7 @@ public class WorldUpdateHandler {
             
             // Get tavern context and decrease reputation
             if (customer.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-                maxitoson.tavernkeeper.tavern.TavernContext tavern = Tavern.get(serverLevel);
+                TavernContext tavern = Tavern.get(serverLevel);
                 if (tavern != null) {
                     tavern.adjustReputation(-20);  // -20 reputation for customer death
                     

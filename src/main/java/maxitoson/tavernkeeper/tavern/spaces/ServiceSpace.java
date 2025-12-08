@@ -1,9 +1,11 @@
 package maxitoson.tavernkeeper.tavern.spaces;
 
+import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.managers.domain.ServiceManagerContext;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceBarrel;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
+import maxitoson.tavernkeeper.tavern.furniture.ServiceReceptionDesk;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -20,23 +22,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a service area where customers order food
- * Recognizes Lecterns (ordering stations) and Barrels (food storage)
+ * Represents a service area where customers order food or sleeping
+ * Recognizes Lecterns (food orders), Reception Desks (sleeping), and Barrels (storage)
  */
 public class ServiceSpace extends BaseSpace {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final List<ServiceLectern> lecterns;
+    private final List<ServiceReceptionDesk> receptionDesks;
     private final List<ServiceBarrel> barrels;
     
     public ServiceSpace(ServiceManagerContext manager, TavernArea area) {
         super(manager, area);
         this.lecterns = new ArrayList<>();
+        this.receptionDesks = new ArrayList<>();
         this.barrels = new ArrayList<>();
     }
     
     @Override
     public Object scanForFurniture() {
         lecterns.clear();
+        receptionDesks.clear();
         barrels.clear();
         
         Level level = area.getLevel();
@@ -50,7 +55,8 @@ public class ServiceSpace extends BaseSpace {
             recognizeBlock(pos, state);
         }
         
-        LOGGER.info("Scanned ServiceSpace: Found {} lecterns and {} barrels", lecterns.size(), barrels.size());
+        LOGGER.info("Scanned ServiceSpace: Found {} lecterns, {} reception desks, {} barrels", 
+            lecterns.size(), receptionDesks.size(), barrels.size());
         return null;
     }
 
@@ -60,10 +66,14 @@ public class ServiceSpace extends BaseSpace {
         
         // Remove existing furniture at this position
         boolean removedLectern = lecterns.removeIf(l -> l.getPosition().equals(pos));
+        boolean removedReceptionDesk = receptionDesks.removeIf(r -> r.getPosition().equals(pos));
         boolean removedBarrel = barrels.removeIf(b -> b.getPosition().equals(pos));
         
         if (removedLectern) {
             LOGGER.debug("Removed lectern at {}", pos);
+        }
+        if (removedReceptionDesk) {
+            LOGGER.debug("Removed reception desk at {}", pos);
         }
         if (removedBarrel) {
             LOGGER.debug("Removed barrel at {}", pos);
@@ -78,6 +88,9 @@ public class ServiceSpace extends BaseSpace {
         if (block instanceof LecternBlock) {
             lecterns.add(new ServiceLectern(pos, state));
             LOGGER.debug("Added lectern at {}", pos);
+        } else if (block == TavernKeeperMod.RECEPTION_DESK.get()) {
+            receptionDesks.add(new ServiceReceptionDesk(pos, state));
+            LOGGER.debug("Added reception desk at {}", pos);
         } else if (block instanceof BarrelBlock) {
             barrels.add(new ServiceBarrel(pos, state));
             LOGGER.debug("Added barrel at {}", pos);
@@ -88,12 +101,20 @@ public class ServiceSpace extends BaseSpace {
         return java.util.Collections.unmodifiableList(lecterns);
     }
     
+    public List<ServiceReceptionDesk> getReceptionDesks() {
+        return java.util.Collections.unmodifiableList(receptionDesks);
+    }
+    
     public List<ServiceBarrel> getBarrels() {
         return java.util.Collections.unmodifiableList(barrels);
     }
     
     public int getLecternCount() {
         return lecterns.size();
+    }
+    
+    public int getReceptionDeskCount() {
+        return receptionDesks.size();
     }
     
     public int getBarrelCount() {

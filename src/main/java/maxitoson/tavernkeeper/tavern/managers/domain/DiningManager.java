@@ -5,6 +5,7 @@ import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
 import maxitoson.tavernkeeper.tavern.spaces.DiningSpace;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -144,10 +145,30 @@ public class DiningManager extends BaseDomainManager<DiningSpace> implements Din
     }
     
     /**
+     * Check if a chair exists at the given position
+     * Queries all dining spaces to see if they have a chair at this position
+     * @return true if any dining space has a chair at this position
+     */
+    public boolean hasChairAt(BlockPos chairPos) {
+        return spaces.values().stream()
+            .flatMap(space -> space.getChairs().stream())
+            .anyMatch(chair -> chair.getPosition().equals(chairPos));
+    }
+    
+    /**
+     * Check if a chair is reserved by a specific customer
+     * @return true if chair is reserved by this customer, false if not reserved or reserved by another
+     */
+    public boolean isChairReservedBy(BlockPos chairPos, UUID customerId) {
+        UUID occupant = occupiedChairs.get(chairPos);
+        return occupant != null && occupant.equals(customerId);
+    }
+    
+    /**
      * Find nearest available chair for a customer
      * Manager knows how to query its own spaces
      */
-    public java.util.Optional<Chair> findNearestAvailableChair(
+    public Optional<Chair> findNearestAvailableChair(
             BlockPos from, double maxDistance) {
         return spaces.values().stream()
             .flatMap(space -> space.getChairs().stream())

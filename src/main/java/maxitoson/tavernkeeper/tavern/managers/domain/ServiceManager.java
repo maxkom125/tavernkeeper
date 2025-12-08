@@ -4,7 +4,9 @@ import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
+import maxitoson.tavernkeeper.tavern.furniture.ServiceReceptionDesk;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceSpace;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -43,6 +45,13 @@ public class ServiceManager extends BaseDomainManager<ServiceSpace> implements S
     }
     
     /**
+     * Get total number of reception desks across all service spaces
+     */
+    public int getTotalReceptionDeskCount() {
+        return spaces.values().stream().mapToInt(ServiceSpace::getReceptionDeskCount).sum();
+    }
+    
+    /**
      * Get total number of barrels across all service spaces
      */
     public int getTotalBarrelCount() {
@@ -53,7 +62,7 @@ public class ServiceManager extends BaseDomainManager<ServiceSpace> implements S
      * Find nearest service lectern
      * Manager knows how to query its own spaces
      */
-    public java.util.Optional<ServiceLectern> findNearestLectern(
+    public Optional<ServiceLectern> findNearestLectern(
             BlockPos from, double maxDistance) {
         return spaces.values().stream()
             .flatMap(space -> space.getLecterns().stream())
@@ -63,6 +72,23 @@ public class ServiceManager extends BaseDomainManager<ServiceSpace> implements S
             })
             .min(java.util.Comparator.comparingDouble(lectern -> 
                 lectern.getPosition().distSqr(from)
+            ));
+    }
+    
+    /**
+     * Find nearest reception desk
+     * Manager knows how to query its own spaces
+     */
+    public Optional<ServiceReceptionDesk> findNearestReceptionDesk(
+            BlockPos from, double maxDistance) {
+        return spaces.values().stream()
+            .flatMap(space -> space.getReceptionDesks().stream())
+            .filter(desk -> {
+                double distSq = desk.getPosition().distSqr(from);
+                return distSq <= maxDistance * maxDistance;
+            })
+            .min(java.util.Comparator.comparingDouble(desk -> 
+                desk.getPosition().distSqr(from)
             ));
     }
 }

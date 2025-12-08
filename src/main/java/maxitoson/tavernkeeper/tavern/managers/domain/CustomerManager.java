@@ -4,9 +4,15 @@ import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
+import maxitoson.tavernkeeper.entities.ai.LifecycleType;
+import maxitoson.tavernkeeper.entities.ai.lifecycle.CustomerLifecycle;
+import maxitoson.tavernkeeper.entities.ai.lifecycle.CustomerLifecycleFactory;
 import maxitoson.tavernkeeper.events.CustomerPaymentEvent;
+import maxitoson.tavernkeeper.tavern.economy.CustomerRequest;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
+import maxitoson.tavernkeeper.tavern.economy.SleepingRequest;
 import maxitoson.tavernkeeper.tavern.TavernContext;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -63,21 +69,21 @@ public class CustomerManager {
      * Simple: null = do nothing, non-null = show feedback
      */
     public static class ServiceResult {
-        private final FoodRequest request;
+        private final CustomerRequest request;
         private final boolean success;
         
-        private ServiceResult(FoodRequest request, boolean success) {
+        private ServiceResult(CustomerRequest request, boolean success) {
             this.request = request;
             this.success = success;
         }
         
-        /** Player served correct food - show success message */
-        public static ServiceResult success(FoodRequest request) {
+        /** Player served/accepted - show success message */
+        public static ServiceResult success(CustomerRequest request) {
             return new ServiceResult(request, true);
         }
         
-        /** Player has wrong food - show what customer wants */
-        public static ServiceResult wrongFood(FoodRequest request) {
+        /** Player has wrong item - show what customer wants */
+        public static ServiceResult wrongFood(CustomerRequest request) {
             return new ServiceResult(request, false);
         }
         
@@ -88,7 +94,7 @@ public class CustomerManager {
         
         public boolean shouldShowFeedback() { return request != null; }
         public boolean isSuccess() { return success; }
-        public FoodRequest getRequest() { return request; }
+        public CustomerRequest getRequest() { return request; }
     }
     
     public CustomerManager(TavernContext tavern) {
@@ -216,6 +222,11 @@ public class CustomerManager {
         
         // Position entity (from Raid.java line 612)
         customer.setPos((double)pos.getX() + 0.5, (double)pos.getY() + 1.0, (double)pos.getZ() + 0.5);
+        
+        // Assign lifecycle (determines entire customer journey)
+        // Factory uses probabilities: X% dining, Y% sleeping, Z% full service
+        CustomerLifecycle lifecycle = CustomerLifecycleFactory.create(level, random);
+        customer.setLifecycle(lifecycle);
         
         // Finalize spawn (from Raid.java line 613)
         customer.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.EVENT, null);
@@ -358,55 +369,82 @@ public class CustomerManager {
     // ========== Customer Service ==========
     
     /**
-     * Handle player serving a customer.
+     * Handle player interaction with customer (serving food or accepting sleeping payment)
      * This is the main entry point for player-customer interactions.
      * Returns a ServiceResult for UI layer to interpret.
      * 
-     * @param player The player serving the customer
+     * @param player The player interacting with the customer
      * @param customer The customer being served
      * @param heldItem The item the player is holding
      * @return ServiceResult with outcome details
      */
     public ServiceResult handlePlayerServe(Player player, CustomerEntity customer, ItemStack heldItem) {
-        // Check if customer is waiting for service
-        if (customer.getCustomerState() != CustomerState.WAITING_SERVICE) {
+        CustomerRequest request = customer.getRequest();
+        CustomerState state = customer.getCustomerState();
+        
+        // Route based on customer state and request type
+        if (state == CustomerState.WAITING_SERVICE && request instanceof FoodRequest foodRequest) {
+            return handleFoodService(player, customer, foodRequest, heldItem);
+        } else if (state == CustomerState.WAITING_RECEPTION && request instanceof SleepingRequest sleepingRequest) {
+            return handleSleepingService(player, customer, sleepingRequest);
+        } else {
+            // Customer not waiting for service or has no request
             return ServiceResult.ignored();
         }
-        
-        // Get customer's food request
-        FoodRequest request = customer.getFoodRequest();
-        if (request == null) {
-            LogUtils.getLogger().warn("Customer {} is waiting for service but has no food request!", customer.getId());
-            return ServiceResult.ignored();
-        }
-        
-        // Check if player has the right food
-        if (!request.isSatisfiedBy(heldItem)) {
-            return ServiceResult.wrongFood(request);
+    }
+    
+    /**
+     * Handle food service - player gives food, customer pays and goes to eat
+     */
+    private ServiceResult handleFoodService(Player player, CustomerEntity customer, 
+                                           FoodRequest foodRequest, ItemStack heldItem) {
+        // Validate food item
+        if (!foodRequest.isSatisfiedBy(heldItem)) {
+            return ServiceResult.wrongFood(foodRequest);
         }
         
         // ===== SUCCESS PATH =====
         
         // Remove food from player
-        heldItem.shrink(request.getRequestedAmount());
+        heldItem.shrink(foodRequest.getRequestedAmount());
         
-        // Give player the payment via event
-        // WalletHandler will add to wallet or fall back to inventory
+        // Give player the payment and record sale in tavern statistics via event
         NeoForge.EVENT_BUS.post(
-            new CustomerPaymentEvent(player, customer, request)
+            new CustomerPaymentEvent(player, customer, foodRequest)
         );
         
-        // Record sale in tavern statistics (always executes, regardless of event)
-        tavern.recordSale(request.getPrice().getCopperValue());
-        
-        // Customer received food - transition to next state
-        customer.setCustomerState(CustomerState.FINDING_SEAT);
-        customer.setFoodRequest(null);
+        // Customer received food - transition to next state via lifecycle
+        customer.transitionToNextState((net.minecraft.server.level.ServerLevel) customer.level());
         
         LogUtils.getLogger().info("Player {} served customer {} with {} and received {}", 
-            player.getName().getString(), customer.getId(), request.getDisplayName(), request.getPrice().getDisplayName());
+            player.getName().getString(), customer.getId(), 
+            foodRequest.getDisplayName(), foodRequest.getPrice().getDisplayName());
         
-        return ServiceResult.success(request);
+        return ServiceResult.success(foodRequest);
+    }
+    
+    /**
+     * Handle sleeping service - player accepts payment, customer goes to bed
+     */
+    private ServiceResult handleSleepingService(Player player, CustomerEntity customer, 
+                                               SleepingRequest sleepingRequest) {
+        // No item check needed for sleeping - just right-click to accept payment
+        
+        // ===== SUCCESS PATH =====
+        
+        // Give player the payment and record sale in tavern statistics via event
+        NeoForge.EVENT_BUS.post(
+            new CustomerPaymentEvent(player, customer, sleepingRequest)
+        );
+        
+        // Customer transitions to finding bed via lifecycle
+        customer.transitionToNextState((net.minecraft.server.level.ServerLevel) customer.level());
+        
+        LogUtils.getLogger().info("Player {} accepted payment from customer {} for {} and received {}", 
+            player.getName().getString(), customer.getId(), 
+            sleepingRequest.getDisplayName(), sleepingRequest.getPrice().getDisplayName());
+        
+        return ServiceResult.success(sleepingRequest);
     }
     
     // ========== Upgrade System ==========
@@ -476,7 +514,7 @@ public class CustomerManager {
         // - waveSpawnPos = empty (find new position)
         activeCustomers.clear();
         spawnCooldownTicks = 0;
-        waveSpawnPos = java.util.Optional.empty();
+        waveSpawnPos = Optional.empty();
     }
 }
 

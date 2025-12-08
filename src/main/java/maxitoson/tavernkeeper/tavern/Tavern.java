@@ -20,9 +20,13 @@ import maxitoson.tavernkeeper.tavern.spaces.BaseSpace;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceSpace;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
+import maxitoson.tavernkeeper.tavern.furniture.ServiceReceptionDesk;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
+import maxitoson.tavernkeeper.tavern.economy.SleepingRequest;
 import maxitoson.tavernkeeper.tavern.upgrades.TavernUpgrade;
 import maxitoson.tavernkeeper.tavern.utils.SignHelper;
+import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -297,7 +301,7 @@ public class Tavern extends SavedData implements TavernContext {
      * UI layers should call this after area modifications.
      */
     public void syncAreasToAllClients() {
-        java.util.List<TavernArea> areas = getAllSpaces().stream()
+        List<TavernArea> areas = getAllSpaces().stream()
             .map(BaseSpace::getArea)
             .toList();
         NetworkHandler.sendToAllPlayers(new SyncAreasPacket(areas));
@@ -352,9 +356,9 @@ public class Tavern extends SavedData implements TavernContext {
     public static class ToggleResult {
         private final boolean nowOpen;
         private final boolean tavernReady;
-        private final java.util.List<String> issues;
+        private final List<String> issues;
         
-        public ToggleResult(boolean nowOpen, boolean tavernReady, java.util.List<String> issues) {
+        public ToggleResult(boolean nowOpen, boolean tavernReady, List<String> issues) {
             this.nowOpen = nowOpen;
             this.tavernReady = tavernReady;
             this.issues = issues;
@@ -368,7 +372,7 @@ public class Tavern extends SavedData implements TavernContext {
             return tavernReady;
         }
         
-        public java.util.List<String> getIssues() {
+        public List<String> getIssues() {
             return issues;
         }
     }
@@ -547,6 +551,31 @@ public class Tavern extends SavedData implements TavernContext {
         return economyManager.createFoodRequest();
     }
     
+    /**
+     * Create a sleeping request for a customer.
+     * Delegates to EconomyManager.
+     * Used by customer AI when they decide to sleep.
+     * 
+     * @return A randomly generated sleeping request
+     */
+    public SleepingRequest createSleepingRequest() {
+        return economyManager.createSleepingRequest();
+    }
+    
+    /**
+     * Get current tavern upgrade level
+     */
+    public TavernUpgrade getTavernLevel() {
+        return upgradeManager.getCurrentUpgrade();
+    }
+    
+    /**
+     * Check if tavern has sleeping areas with beds
+     */
+    public boolean hasSleepingAreas() {
+        return sleepingManager.getTotalBedCount() > 0;
+    }
+    
     // ========== Statistics (TavernContext interface) ==========
     
     @Override
@@ -716,7 +745,7 @@ public class Tavern extends SavedData implements TavernContext {
         
         // Determine tavern status and issues
         boolean tavernReady = isOpen();
-        java.util.List<String> issues = new java.util.ArrayList<>();
+        List<String> issues = new ArrayList<>();
         
         if (manuallyOpen && !tavernReady) {
             // Sign is OPEN but missing requirements
@@ -785,7 +814,7 @@ public class Tavern extends SavedData implements TavernContext {
      * Find nearest available chair for a customer
      * Delegates to DiningManager
      */
-    public java.util.Optional<Chair> findNearestAvailableChair(
+    public Optional<Chair> findNearestAvailableChair(
             BlockPos from, double maxDistance) {
         return diningManager.findNearestAvailableChair(from, maxDistance);
     }
@@ -794,7 +823,7 @@ public class Tavern extends SavedData implements TavernContext {
      * Reserve a chair for a customer
      * Encapsulates DiningManager access for AI behaviors
      */
-    public boolean reserveChair(BlockPos chairPos, java.util.UUID customerId) {
+    public boolean reserveChair(BlockPos chairPos, UUID customerId) {
         return diningManager.reserveChair(chairPos, customerId);
     }
     
@@ -807,12 +836,78 @@ public class Tavern extends SavedData implements TavernContext {
     }
     
     /**
+     * Check if a chair exists at the given position
+     * Delegates to DiningManager
+     */
+    public boolean hasChairAt(BlockPos chairPos) {
+        return diningManager.hasChairAt(chairPos);
+    }
+    
+    /**
      * Find nearest service lectern
      * Delegates to ServiceManager
      */
-    public java.util.Optional<ServiceLectern> findNearestLectern(
+    public Optional<ServiceLectern> findNearestLectern(
             BlockPos from, double maxDistance) {
         return serviceManager.findNearestLectern(from, maxDistance);
+    }
+    
+    /**
+     * Find nearest reception desk
+     * Delegates to ServiceManager
+     */
+    public Optional<ServiceReceptionDesk> findNearestReceptionDesk(
+            BlockPos from, double maxDistance) {
+        return serviceManager.findNearestReceptionDesk(from, maxDistance);
+    }
+    
+    /**
+     * Find nearest available bed for a customer
+     * Delegates to SleepingManager
+     */
+    public Optional<BlockPos> findNearestAvailableBed(
+            BlockPos from, double maxDistance) {
+        return sleepingManager.findNearestAvailableBed(from, maxDistance);
+    }
+    
+    /**
+     * Reserve a bed for a customer
+     * Encapsulates SleepingManager access for AI behaviors
+     */
+    public boolean reserveBed(BlockPos bedPos, UUID customerId) {
+        return sleepingManager.reserveBed(bedPos, customerId);
+    }
+    
+    /**
+     * Release a bed reservation
+     * Encapsulates SleepingManager access for AI behaviors
+     */
+    public void releaseBed(BlockPos bedPos) {
+        sleepingManager.releaseBed(bedPos);
+    }
+    
+    /**
+     * Check if a bed exists at the given position
+     * Delegates to SleepingManager
+     */
+    public boolean hasBedAt(BlockPos bedPos) {
+        return sleepingManager.hasBedAt(bedPos);
+    }
+    
+    /**
+     * Check if a bed is reserved by a specific customer
+     * Delegates to SleepingManager
+     */
+    public boolean isBedReservedBy(BlockPos bedPos, UUID customerId) {
+        return sleepingManager.isBedReservedBy(bedPos, customerId);
+    }
+    
+    /**
+     * Check if a chair is reserved by a specific customer
+     * Delegates to DiningManager
+     */
+    public boolean isChairReservedBy(BlockPos chairPos, UUID customerId) {
+        return diningManager.isChairReservedBy(chairPos, customerId);
     }
     
     // ========== Scanning ==========
