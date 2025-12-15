@@ -15,7 +15,7 @@ import java.util.Optional;
  * Reserves the chair to prevent other customers from taking it
  */
 public class FindSeat extends MoveToTargetBehavior {
-    private static final int REACHED_DISTANCE = 1;
+    private static final int REACHED_DISTANCE = 2;
     
     public FindSeat(float speedModifier) {
         super(speedModifier);

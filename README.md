@@ -17,7 +17,9 @@ Run a fully functional tavern in Minecraft:
 2. **Mark Area**: Right-click → Right-click
 3. **Auto-saved**: "Saved Dining Area #3 (250 blocks)"
 4. **Place Furniture**:
-   - Dining: Place upside-down stairs (tables) + stairs facing tables (chairs)
+   - Dining: 
+     - Vanilla: Upside-down stairs (tables) + stairs facing tables (chairs)
+     - Or use furniture from supported mods (Macaw's Furniture, Another Furniture Mod)
    - Sleeping: Place beds for customers to sleep overnight
    - Service: Place lecterns (food orders) + reception desks (room bookings)
 5. **Set Tavern Sign**: Hold cane → Right-click any sign → Designates tavern sign

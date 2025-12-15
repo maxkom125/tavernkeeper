@@ -45,6 +45,12 @@ tavernkeeper/
 ├── items/          # MarkingCane, TavernItem, WalletItem
 ├── areas/          # Types, Renderer, Commands
 │   └── client/     # ModeInputHandler
+├── compat/         # Mod compatibility layer
+│   └── furniture/  # Furniture mod compatibility
+│       ├── FurnitureRecognizer.java          # Interface for furniture recognition
+│       ├── FurnitureCompatRegistry.java      # Central registry
+│       ├── VanillaFurnitureRecognizer.java   # Vanilla stairs support
+│       └── MacawsFurnitureRecognizer.java    # Macaw's Furniture support
 ├── events/         # Event handlers (organized by domain)
 │   ├── PlayerInteractionHandler.java    # Player clicks & interactions
 │   ├── WorldUpdateHandler.java          # Block place/break, entity spawn
@@ -73,7 +79,9 @@ tavernkeeper/
 
 ### 7. **Furniture Recognition**
 - **Real-time updates**: Detects furniture when placed/broken
-- **Dining Areas**: Stairs (Chairs) + Upside-down Stairs (Tables)
+- **Dining Areas**: 
+  - Vanilla: Stairs (Chairs) + Upside-down Stairs (Tables)
+  - **Macaw's Furniture**: Automatically recognizes chairs, tables, desks, counters, stools (soft dependency)
 - **Sleeping Areas**: Beds (with reservation system)
 - **Service Areas**: Lecterns (food service) + Reception Desks (sleeping service)
 - **Optimized**: Only updates specific block position, no full rescans

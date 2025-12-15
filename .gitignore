@@ -45,6 +45,9 @@ logs/
 # Unnecessary files
 **/textures/item/unused_images/
 
+# Internal documentation and notes
+internal/
+
 # Other
 *.jar
 !gradle/wrapper/gradle-wrapper.jar

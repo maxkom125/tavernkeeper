@@ -9,8 +9,11 @@ import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.entities.ai.LifecycleType;
 import maxitoson.tavernkeeper.entities.ai.lifecycle.CustomerLifecycle;
 import maxitoson.tavernkeeper.entities.ai.lifecycle.CustomerLifecycleFactory;
+import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.tavern.TavernContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import maxitoson.tavernkeeper.tavern.economy.CustomerRequest;
 import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import maxitoson.tavernkeeper.tavern.economy.SleepingRequest;
@@ -424,6 +427,55 @@ public class CustomerEntity extends AbstractVillager {
         if (!this.level().isClientSide && getSpawnPosition() == null) {
             setSpawnPosition(this.blockPosition());
             LOGGER.info("Customer {} set new spawn position: {}", this.getId(), getSpawnPosition());
+        }
+    }
+    
+    // ========================================
+    // SITTING HELPERS
+    // ========================================
+    
+    /**
+     * Make this customer sit at the specified position
+     * 
+     * @param pos The block position to sit at
+     * @param duration How long to sit (in ticks)
+     * @param facing Direction to face while sitting (or null)
+     * @return true if successfully sat down, false if position was occupied
+     */
+    public boolean sitDown(BlockPos pos, int duration, Direction facing) {
+        return SittingEntity.sitDown(pos, this, duration, TavernKeeperMod.SITTING.get(), facing);
+    }
+    
+    /**
+     * Check if this customer is currently sitting
+     * 
+     * @return true if riding a SittingEntity
+     */
+    public boolean isSitting() {
+        return this.getVehicle() instanceof SittingEntity;
+    }
+    
+    /**
+     * Get the sitting entity if currently sitting
+     * 
+     * @return The SittingEntity, or null if not sitting
+     */
+    public SittingEntity getSittingEntity() {
+        if (this.getVehicle() instanceof SittingEntity sitting) {
+            return sitting;
+        }
+        return null;
+    }
+    
+    /**
+     * Force the customer to stand up early
+     * Does nothing if not currently sitting
+     */
+    public void standUp() {
+        SittingEntity sitting = getSittingEntity();
+        if (sitting != null) {
+            sitting.setMaxLifeTime(0); // Trigger immediate dismount
+            LOGGER.debug("Customer {} standing up", this.getId());
         }
     }
     

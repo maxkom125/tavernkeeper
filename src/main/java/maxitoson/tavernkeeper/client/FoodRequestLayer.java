@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.model.VillagerModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
@@ -17,11 +16,11 @@ import net.minecraft.world.item.ItemStack;
  * Custom render layer that displays the food request (carrots, etc.) floating above the customer's head
  * Only shows when customer is in WAITING_SERVICE state
  */
-public class FoodRequestLayer extends RenderLayer<CustomerEntity, VillagerModel<CustomerEntity>> {
+public class FoodRequestLayer extends RenderLayer<CustomerEntity, SittingVillagerModel<CustomerEntity>> {
     private final net.minecraft.client.renderer.entity.ItemRenderer itemRenderer;
     private final Font font;
     
-    public FoodRequestLayer(RenderLayerParent<CustomerEntity, VillagerModel<CustomerEntity>> parent,
+    public FoodRequestLayer(RenderLayerParent<CustomerEntity, SittingVillagerModel<CustomerEntity>> parent,
                            net.minecraft.client.renderer.entity.ItemRenderer itemRenderer,
                            Font font) {
         super(parent);

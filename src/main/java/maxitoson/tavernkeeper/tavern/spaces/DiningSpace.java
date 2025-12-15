@@ -1,6 +1,7 @@
 package maxitoson.tavernkeeper.tavern.spaces;
 
 import maxitoson.tavernkeeper.areas.TavernArea;
+import maxitoson.tavernkeeper.compat.furniture.FurnitureCompatRegistry;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
 import maxitoson.tavernkeeper.tavern.furniture.Table;
 import maxitoson.tavernkeeper.tavern.managers.domain.DiningManagerContext;
@@ -8,10 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.Half;
 
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
@@ -21,7 +19,7 @@ import java.util.List;
 
 /**
  * Represents a single dining area with its tables and chairs
- * Recognizes stairs as chairs (normal) and tables (upside-down)
+ * Recognizes furniture from vanilla Minecraft (stairs as chairs/tables) and supported mods (e.g., Macaw's Furniture)
  * 
  * Pattern: Space owns Area (1:1) and Furniture
  */
@@ -84,15 +82,9 @@ public class DiningSpace extends BaseSpace {
         
         for (BlockPos pos : BlockPos.betweenClosed(minPos, maxPos)) {
             BlockState state = level.getBlockState(pos);
-            Block block = state.getBlock();
-            Object furniture = null;
             
-            // Check if block is a furniture block
-            if (block instanceof StairBlock) {
-                furniture = recognizeStair(pos, state);
-            }
-            // TODO: Add more furniture blocks here
-
+            Object furniture = FurnitureCompatRegistry.recognizeFurniture(pos, state);
+            
             if (furniture == null) {
                 continue;
             }
@@ -143,42 +135,19 @@ public class DiningSpace extends BaseSpace {
             LOGGER.debug("Removed chair at {}", pos);
         }
         
-        // If it's a stair block, recognize and add it
-        if (state.getBlock() instanceof StairBlock) {
-            Object furniture = recognizeStair(pos, state);
-            DiningManagerContext diningManager = (DiningManagerContext) manager;
-            
-            if (furniture instanceof Table table && diningManager.canAddTable()) {
-                tables.add(table);
-                LOGGER.debug("Added table at {}", pos);
-            } else if (furniture instanceof Chair chair && diningManager.canAddChair()) {
-                chairs.add(chair);
-                LOGGER.debug("Added chair at {}", pos);
-            }
+        Object furniture = FurnitureCompatRegistry.recognizeFurniture(pos, state);
+        DiningManagerContext diningManager = (DiningManagerContext) manager;
+        
+        if (furniture instanceof Table table && diningManager.canAddTable()) {
+            tables.add(table);
+            LOGGER.debug("Added table at {}", pos);
+        } else if (furniture instanceof Chair chair && diningManager.canAddChair()) {
+            chairs.add(chair);
+            LOGGER.debug("Added chair at {}", pos);
         }
         
         // Schedule validation for next tick (after block change is committed to level)
         scheduleValidation();
-    }
-    
-    /**
-     * Recognize a stair block and return the furniture object (Table or Chair)
-     * @return Table if upside-down stairs, Chair if normal stairs, null otherwise
-     */
-    private Object recognizeStair(BlockPos pos, BlockState state) {
-        if (!state.hasProperty(StairBlock.HALF)) {
-            return null;
-        }
-        
-        Half half = state.getValue(StairBlock.HALF);
-        
-        if (half == Half.TOP) {
-            // Upside-down stairs = Table
-            return new Table(pos, state);
-        } else {
-            // Normal stairs = Chair
-            return new Chair(pos, state);
-        }
     }
     
     /**

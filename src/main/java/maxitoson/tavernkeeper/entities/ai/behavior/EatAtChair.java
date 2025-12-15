@@ -3,10 +3,14 @@ package maxitoson.tavernkeeper.entities.ai.behavior;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
+import maxitoson.tavernkeeper.entities.SittingEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import maxitoson.tavernkeeper.tavern.TavernContext;
+import maxitoson.tavernkeeper.tavern.furniture.Chair;
+import maxitoson.tavernkeeper.TavernKeeperMod;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -83,45 +87,50 @@ public class EatAtChair extends Behavior<CustomerEntity> {
             return;
         }
         
-        // Make customer sit (teleport to exact chair position and stop moving)
-        // Add 0.5 to center on the block horizontally
-        double sitX = chairPos.getX() + 0.5;
-        double sitY = chairPos.getY() + 0.5; // Sit slightly above the block
-        double sitZ = chairPos.getZ() + 0.5;
+        // Get facing from Chair if available
+        Direction facing = tavern.getChairAt(chairPos)
+            .map(Chair::getFacing)
+            .orElse(null);
         
-        customer.teleportTo(sitX, sitY, sitZ);
-        customer.setDeltaMovement(0, 0, 0); // Stop all movement
+        // Make customer sit using SittingEntity
+        boolean success = SittingEntity.sitDown(
+            chairPos, 
+            customer, 
+            EATING_DURATION, 
+            TavernKeeperMod.SITTING.get(),
+            facing
+        );
         
-        // Make customer look forward (toward the table they're facing)
-        // This will be refined later with proper facing direction
+        if (!success) {
+            // Failed to sit (position occupied? - shouldn't happen as we reserved it)
+            LOGGER.warn("Customer {} failed to sit at chair {}, transitioning to FINDING_SEAT", 
+                customer.getId(), chairPos);
+            customer.setTargetPosition(null);
+            customer.setCustomerState(CustomerState.FINDING_SEAT);
+            return;
+        }
         
         startTime = gameTime;
         lastParticleTime = gameTime;
         
-        LOGGER.info("Customer {} started eating at chair {} for {} ticks", 
+        LOGGER.info("Customer {} started sitting and eating at chair {} for {} ticks", 
             customer.getId(), chairPos, EATING_DURATION);
     }
     
     @Override
     protected void tick(ServerLevel level, CustomerEntity customer, long gameTime) {
+        // Check if still sitting
+        if (!(customer.getVehicle() instanceof SittingEntity)) {
+            // Was dismounted early (timeout or interrupted)
+            LOGGER.debug("Customer {} was dismounted from SittingEntity during eating", customer.getId());
+            // canStillUse will return false and stop() will be called
+            return;
+        }
+        
         // Spawn eating particles occasionally
         if (gameTime - lastParticleTime >= PARTICLE_INTERVAL) {
             spawnEatingParticles(level, customer);
             lastParticleTime = gameTime;
-        }
-        
-        // Keep customer in place (prevent gravity/movement)
-        BlockPos chairPos = customer.getTargetPosition();
-        if (chairPos != null) {
-            double sitX = chairPos.getX() + 0.5;
-            double sitY = chairPos.getY() + 0.5;
-            double sitZ = chairPos.getZ() + 0.5;
-            
-            // Only teleport if customer moved too far (allows small movements for animations)
-            if (customer.distanceToSqr(sitX, sitY, sitZ) > 0.1) {
-                customer.teleportTo(sitX, sitY, sitZ);
-                customer.setDeltaMovement(0, 0, 0);
-            }
         }
     }
     
@@ -129,6 +138,13 @@ public class EatAtChair extends Behavior<CustomerEntity> {
     protected void stop(ServerLevel level, CustomerEntity customer, long gameTime) {
         BlockPos chairPos = customer.getTargetPosition();
         TavernContext tavern = Tavern.get(level);
+        
+        // Make customer stand up if still sitting
+        if (customer.getVehicle() instanceof SittingEntity sittingEntity) {
+            // Force dismount by setting lifetime to 0
+            sittingEntity.setMaxLifeTime(0);
+            LOGGER.debug("Customer {} standing up from chair", customer.getId());
+        }
         
         // Check if chair still exists (asks tavern instead of checking block types)
         boolean chairExists = chairPos != null && tavern.hasChairAt(chairPos);

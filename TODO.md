@@ -10,7 +10,11 @@
   - [x] Add advancments: coins earned milestones
 - [x] Fix bug: Customers spawn on trees (maybe on snow on them?) -> fell down -> trigger 'run away from danger' event
 - [x] Add sleeping requests
-- [ ] Add reception desk texture, limit number of reception desks and lecterns
+- [x] Add reception desk texture/model (lectern-based design)
+- [x] Add sitting animations for customers at chairs
+- [ ] Fix weird chair reservation
+- [ ] Limit number of reception desks and lecterns
+- [ ] Add proper reception desk texture
 - [ ] Start sleeping requests only from tavern level 2
 
 ### Medium Priority
@@ -39,9 +43,9 @@
 ### Low Priority
 - [ ] **Customer Variety**
   - [ ] Some customers will pay more or try to skam!
-- [ ] **Advanced Furniture** (Macaw's Furniture integration)
-  - Detect modded tables/chairs
-  - More furniture variety
+- [x] **Advanced Furniture** (Macaw's Furniture integration)
+  - [x] Detect modded tables/chairs
+  - [x] More furniture variety
 - [ ] **Visual polish** (particles, sounds, effects)
 
 Other ideas

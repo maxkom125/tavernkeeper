@@ -115,6 +115,11 @@ public interface TavernContext {
     boolean hasChairAt(BlockPos chairPos);
     
     /**
+     * Get chair at position (if exists)
+     */
+    Optional<Chair> getChairAt(BlockPos chairPos);
+    
+    /**
      * Find nearest service lectern
      * Used by MoveToLectern behavior
      */

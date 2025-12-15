@@ -155,6 +155,13 @@ public class DiningManager extends BaseDomainManager<DiningSpace> implements Din
             .anyMatch(chair -> chair.getPosition().equals(chairPos));
     }
     
+    public Optional<Chair> getChairAt(BlockPos chairPos) {
+        return spaces.values().stream()
+            .flatMap(space -> space.getChairs().stream())
+            .filter(chair -> chair.getPosition().equals(chairPos))
+            .findFirst();
+    }
+    
     /**
      * Check if a chair is reserved by a specific customer
      * @return true if chair is reserved by this customer, false if not reserved or reserved by another

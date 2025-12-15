@@ -843,6 +843,11 @@ public class Tavern extends SavedData implements TavernContext {
         return diningManager.hasChairAt(chairPos);
     }
     
+    @Override
+    public Optional<Chair> getChairAt(BlockPos chairPos) {
+        return diningManager.getChairAt(chairPos);
+    }
+    
     /**
      * Find nearest service lectern
      * Delegates to ServiceManager

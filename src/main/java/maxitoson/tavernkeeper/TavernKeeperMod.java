@@ -2,8 +2,10 @@ package maxitoson.tavernkeeper;
 
 import com.mojang.logging.LogUtils;
 import maxitoson.tavernkeeper.blocks.ReceptionDeskBlock;
+import maxitoson.tavernkeeper.compat.furniture.FurnitureCompatRegistry;
 import maxitoson.tavernkeeper.datagen.DataGenerators;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
+import maxitoson.tavernkeeper.entities.SittingEntity;
 import maxitoson.tavernkeeper.items.MarkingCane;
 import maxitoson.tavernkeeper.items.WalletItem;
 import maxitoson.tavernkeeper.items.TavernItem;
@@ -61,9 +63,9 @@ public class TavernKeeperMod
     // Creates a new BlockItem with the id "tavernkeeper:example_block", combining the namespace and path
     public static final DeferredItem<BlockItem> EXAMPLE_BLOCK_ITEM = ITEMS.registerSimpleBlockItem("example_block", EXAMPLE_BLOCK);
 
-    // Reception Desk block - for sleeping service requests (uses enchanting table texture)
+    // Reception Desk block - for sleeping service requests (based on lectern)
     public static final DeferredBlock<Block> RECEPTION_DESK = BLOCKS.register("reception_desk", 
-        () -> new ReceptionDeskBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.ENCHANTING_TABLE)));
+        () -> new ReceptionDeskBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.LECTERN)));
     public static final DeferredItem<BlockItem> RECEPTION_DESK_ITEM = ITEMS.registerSimpleBlockItem("reception_desk", RECEPTION_DESK);
 
     // Creates a new food item with the id "tavernkeeper:example_id", nutrition 1 and saturation 2
@@ -91,6 +93,19 @@ public class TavernKeeperMod
         .sized(EntityType.VILLAGER.getWidth(), EntityType.VILLAGER.getHeight())
         .clientTrackingRange(EntityType.VILLAGER.clientTrackingRange())
         .build("customer"));
+    
+    // Register Sitting Entity (invisible entity for sitting animations)
+    public static final DeferredHolder<EntityType<?>, EntityType<SittingEntity>> SITTING = ENTITY_TYPES.register("sitting", 
+        () -> EntityType.Builder.<SittingEntity>of(
+            (EntityType<SittingEntity> type, net.minecraft.world.level.Level level) -> new SittingEntity(type, level),
+            MobCategory.MISC
+        )
+        .sized(0.01f, 0.01f) // Very small size (invisible)
+        .noSummon() // Cannot be summoned with /summon
+        .fireImmune() // Don't burn
+        .noSave() // Don't save to world (temporary entity)
+        .clientTrackingRange(10)
+        .build("sitting"));
     
     // Customer spawn egg for testing
     public static final DeferredItem<Item> CUSTOMER_SPAWN_EGG = ITEMS.register("customer_spawn_egg",
@@ -149,6 +164,12 @@ public class TavernKeeperMod
     {
         // Some common setup code
         LOGGER.info("HELLO FROM COMMON SETUP");
+        
+        // Initialize furniture compatibility registry
+        event.enqueueWork(() -> {
+            FurnitureCompatRegistry.init();
+            LOGGER.info("Furniture compatibility registry initialized");
+        });
 
         if (Config.LOG_DIRT_BLOCK.getAsBoolean())
             LOGGER.info("DIRT BLOCK >> {}", BuiltInRegistries.BLOCK.getKey(Blocks.DIRT));
