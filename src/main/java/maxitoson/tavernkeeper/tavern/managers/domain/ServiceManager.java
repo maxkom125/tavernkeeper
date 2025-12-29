@@ -3,6 +3,7 @@ package maxitoson.tavernkeeper.tavern.managers.domain;
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.TavernContext;
+import maxitoson.tavernkeeper.tavern.furniture.types.ServiceFurnitureType;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceReceptionDesk;
 import maxitoson.tavernkeeper.tavern.spaces.ServiceSpace;
@@ -16,6 +17,9 @@ import net.minecraft.server.level.ServerLevel;
  * Each ServiceSpace represents one SERVICE area
  */
 public class ServiceManager extends BaseDomainManager<ServiceSpace> implements ServiceManagerContext {
+    
+    private static final int MAX_LECTERNS = 1;
+    private static final int MAX_RECEPTION_DESKS = 1;
     
     public ServiceManager(TavernContext tavern) {
         super(tavern);
@@ -90,6 +94,22 @@ public class ServiceManager extends BaseDomainManager<ServiceSpace> implements S
             .min(java.util.Comparator.comparingDouble(desk -> 
                 desk.getPosition().distSqr(from)
             ));
+    }
+    
+    /**
+     * Check if more furniture of the given type can be added based on current limits
+     * Implements ServiceManagerContext interface
+     * 
+     * @param type the type of furniture to check
+     * @return true if furniture can be added, false if limit reached
+     */
+    @Override
+    public boolean canAddFurniture(ServiceFurnitureType type) {
+        return switch (type) {
+            case LECTERN -> getTotalLecternCount() < MAX_LECTERNS;
+            case RECEPTION_DESK -> getTotalReceptionDeskCount() < MAX_RECEPTION_DESKS;
+            default -> true; // No limit on other furniture types (e.g., barrels)
+        };
     }
 }
 

@@ -13,7 +13,7 @@
 - [x] Add reception desk texture/model (lectern-based design)
 - [x] Add sitting animations for customers at chairs
 - [ ] Fix weird chair reservation
-- [ ] Limit number of reception desks and lecterns
+- [x] Limit number of reception desks and lecterns
 - [x] Add proper reception desk texture
 - [ ] Start sleeping requests only from tavern level 2
 

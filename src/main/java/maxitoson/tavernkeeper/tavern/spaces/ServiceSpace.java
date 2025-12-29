@@ -4,6 +4,7 @@ import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.managers.domain.ServiceManagerContext;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceBarrel;
+import maxitoson.tavernkeeper.tavern.furniture.types.ServiceFurnitureType;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceLectern;
 import maxitoson.tavernkeeper.tavern.furniture.ServiceReceptionDesk;
 import net.minecraft.core.BlockPos;
@@ -38,26 +39,62 @@ public class ServiceSpace extends BaseSpace {
         this.barrels = new ArrayList<>();
     }
     
+    /**
+     * Result of scanning for furniture in a service space
+     */
+    public static class ScanResult {
+        private final int lecternsFound;
+        private final int lecternsRejected;
+        private final int receptionDesksFound;
+        private final int receptionDesksRejected;
+        private final int barrelsFound;
+        
+        public ScanResult(int lecternsFound, int lecternsRejected, int receptionDesksFound, int receptionDesksRejected, int barrelsFound) {
+            this.lecternsFound = lecternsFound;
+            this.lecternsRejected = lecternsRejected;
+            this.receptionDesksFound = receptionDesksFound;
+            this.receptionDesksRejected = receptionDesksRejected;
+            this.barrelsFound = barrelsFound;
+        }
+        
+        public int getLecternsFound() { return lecternsFound; }
+        public int getLecternsRejected() { return lecternsRejected; }
+        public int getReceptionDesksFound() { return receptionDesksFound; }
+        public int getReceptionDesksRejected() { return receptionDesksRejected; }
+        public int getBarrelsFound() { return barrelsFound; }
+        public boolean hadRejectedLecterns() { return lecternsRejected > 0; }
+        public boolean hadRejectedReceptionDesks() { return receptionDesksRejected > 0; }
+    }
+    
+    /**
+     * Scan the area and recognize all service furniture
+     */
     @Override
-    public Object scanForFurniture() {
+    public ScanResult scanForFurniture() {
         lecterns.clear();
         receptionDesks.clear();
         barrels.clear();
         
         Level level = area.getLevel();
-        if (level == null) return null;
+        if (level == null) return new ScanResult(0, 0, 0, 0, 0);
         
         BlockPos minPos = area.getMinPos();
         BlockPos maxPos = area.getMaxPos();
         
+        int rejectedLecterns = 0;
+        int rejectedReceptionDesks = 0;
+        
         for (BlockPos pos : BlockPos.betweenClosed(minPos, maxPos)) {
             BlockState state = level.getBlockState(pos);
-            recognizeBlock(pos, state);
+            int[] rejections = recognizeBlock(pos, state);
+            rejectedLecterns += rejections[0];
+            rejectedReceptionDesks += rejections[1];
         }
         
-        LOGGER.info("Scanned ServiceSpace: Found {} lecterns, {} reception desks, {} barrels", 
-            lecterns.size(), receptionDesks.size(), barrels.size());
-        return null;
+        LOGGER.info("Scanned ServiceSpace: Found {} lecterns ({} rejected), {} reception desks ({} rejected), {} barrels", 
+            lecterns.size(), rejectedLecterns, receptionDesks.size(), rejectedReceptionDesks, barrels.size());
+            
+        return new ScanResult(lecterns.size(), rejectedLecterns, receptionDesks.size(), rejectedReceptionDesks, barrels.size());
     }
 
     @Override
@@ -83,18 +120,38 @@ public class ServiceSpace extends BaseSpace {
         recognizeBlock(pos, state);
     }
     
-    private void recognizeBlock(BlockPos pos, BlockState state) {
+    /**
+     * Recognize and add a block as furniture if applicable
+     * @return int array [rejectedLecterns, rejectedReceptionDesks]
+     */
+    private int[] recognizeBlock(BlockPos pos, BlockState state) {
         Block block = state.getBlock();
+        ServiceManagerContext serviceManager = (ServiceManagerContext) manager;
+        int rejectedLecterns = 0;
+        int rejectedReceptionDesks = 0;
+        
         if (block instanceof LecternBlock) {
-            lecterns.add(new ServiceLectern(pos, state));
-            LOGGER.debug("Added lectern at {}", pos);
+            if (serviceManager.canAddFurniture(ServiceFurnitureType.LECTERN)) {
+                lecterns.add(new ServiceLectern(pos, state));
+                LOGGER.debug("Added lectern at {}", pos);
+            } else {
+                rejectedLecterns = 1;
+                LOGGER.debug("Rejected lectern at {} - limit reached", pos);
+            }
         } else if (block == TavernKeeperMod.RECEPTION_DESK.get()) {
-            receptionDesks.add(new ServiceReceptionDesk(pos, state));
-            LOGGER.debug("Added reception desk at {}", pos);
+            if (serviceManager.canAddFurniture(ServiceFurnitureType.RECEPTION_DESK)) {
+                receptionDesks.add(new ServiceReceptionDesk(pos, state));
+                LOGGER.debug("Added reception desk at {}", pos);
+            } else {
+                rejectedReceptionDesks = 1;
+                LOGGER.debug("Rejected reception desk at {} - limit reached", pos);
+            }
         } else if (block instanceof BarrelBlock) {
             barrels.add(new ServiceBarrel(pos, state));
             LOGGER.debug("Added barrel at {}", pos);
         }
+        
+        return new int[]{rejectedLecterns, rejectedReceptionDesks};
     }
     
     public List<ServiceLectern> getLecterns() {

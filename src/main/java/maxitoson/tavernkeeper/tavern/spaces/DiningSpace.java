@@ -3,6 +3,7 @@ package maxitoson.tavernkeeper.tavern.spaces;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.compat.furniture.FurnitureCompatRegistry;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
+import maxitoson.tavernkeeper.tavern.furniture.types.DiningFurnitureType;
 import maxitoson.tavernkeeper.tavern.furniture.Table;
 import maxitoson.tavernkeeper.tavern.managers.domain.DiningManagerContext;
 import net.minecraft.core.BlockPos;
@@ -92,7 +93,7 @@ public class DiningSpace extends BaseSpace {
             // Check if it's a table or chair
             if (furniture instanceof Table table) {
                 // It's a table - check if we can add it
-                if (diningManager.canAddTable()) {
+                if (diningManager.canAddFurniture(DiningFurnitureType.TABLE)) {
                     tables.add(table);
                     LOGGER.debug("Added table at {}", pos);
                 } else {
@@ -101,7 +102,7 @@ public class DiningSpace extends BaseSpace {
                 }
             } else if (furniture instanceof Chair chair) {
                 // It's a chair - check if we can add it
-                if (diningManager.canAddChair()) {
+                if (diningManager.canAddFurniture(DiningFurnitureType.CHAIR)) {
                     chairs.add(chair);
                     LOGGER.debug("Added chair at {} (will validate)", pos);
                 } else {
@@ -138,10 +139,10 @@ public class DiningSpace extends BaseSpace {
         Object furniture = FurnitureCompatRegistry.recognizeFurniture(pos, state);
         DiningManagerContext diningManager = (DiningManagerContext) manager;
         
-        if (furniture instanceof Table table && diningManager.canAddTable()) {
+        if (furniture instanceof Table table && diningManager.canAddFurniture(DiningFurnitureType.TABLE)) {
             tables.add(table);
             LOGGER.debug("Added table at {}", pos);
-        } else if (furniture instanceof Chair chair && diningManager.canAddChair()) {
+        } else if (furniture instanceof Chair chair && diningManager.canAddFurniture(DiningFurnitureType.CHAIR)) {
             chairs.add(chair);
             LOGGER.debug("Added chair at {}", pos);
         }

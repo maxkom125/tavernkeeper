@@ -686,13 +686,14 @@ public class Tavern extends SavedData implements TavernContext {
         
         // Apply to all managers
         currentTavernLevel.applyToDiningManager(diningManager);
+        currentTavernLevel.applyToSleepingManager(sleepingManager);
         currentTavernLevel.applyToCustomerManager(customerManager);
         currentTavernLevel.applyToEconomyManager(economyManager);
-        // Future: currentTavernLevel.applyToSleepingManager(sleepingManager);
         
-        LOGGER.info("Applied upgrade {} (maxTables: {}, paymentMult: {}x, spawnMult: {}x)", 
+        LOGGER.info("Applied upgrade {} (maxTables: {}, maxBeds: {}, paymentMult: {}x, spawnMult: {}x)", 
             currentTavernLevel.getDisplayName(), 
             diningManager.getMaxTables(),
+            sleepingManager.getMaxBeds(),
             economyManager.getPaymentMultiplierValue(),
             customerManager.getSpawnRateMultiplier());
     }

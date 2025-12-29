@@ -1,5 +1,6 @@
 package maxitoson.tavernkeeper.tavern.managers.domain;
 
+import maxitoson.tavernkeeper.tavern.furniture.types.DiningFurnitureType;
 import maxitoson.tavernkeeper.tavern.managers.ManagerContext;
 
 /**
@@ -12,13 +13,10 @@ import maxitoson.tavernkeeper.tavern.managers.ManagerContext;
  */
 public interface DiningManagerContext extends ManagerContext {
     /**
-     * Check if more tables can be added based on current upgrade limits
+     * Check if more furniture of the given type can be added based on current upgrade limits
+     * @param type the type of furniture to check
+     * @return true if furniture can be added, false if limit reached
      */
-    boolean canAddTable();
-    
-    /**
-     * Check if more chairs can be added based on current upgrade limits
-     */
-    boolean canAddChair();
+    boolean canAddFurniture(DiningFurnitureType type);
 }
 

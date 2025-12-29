@@ -3,6 +3,7 @@ package maxitoson.tavernkeeper.tavern.upgrades;
 import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.managers.domain.CustomerManager;
 import maxitoson.tavernkeeper.tavern.managers.domain.DiningManager;
+import maxitoson.tavernkeeper.tavern.managers.domain.SleepingManager;
 import maxitoson.tavernkeeper.tavern.managers.system.EconomyManager;
 
 /**
@@ -21,6 +22,7 @@ public enum TavernUpgrade {
         // Benefits
         2,      // Max tables
         8,      // Max chairs
+        2,      // Max beds
         1.0f,   // Spawn rate multiplier
         1.0f    // Payment multiplier
     ),
@@ -33,6 +35,7 @@ public enum TavernUpgrade {
         // Benefits
         4,      // Max tables
         16,     // Max chairs
+        4,      // Max beds
         1.1f,   // Spawn rate multiplier (10% faster)
         1.1f    // Payment multiplier (+10%)
     ),
@@ -45,6 +48,7 @@ public enum TavernUpgrade {
         // Benefits
         8,      // Max tables
         32,     // Max chairs
+        8,      // Max beds
         1.3f,   // Spawn rate multiplier (30% faster)
         1.3f    // Payment multiplier (+30%)
     );
@@ -57,17 +61,19 @@ public enum TavernUpgrade {
     // Benefits
     private final int maxTables;
     private final int maxChairs;
+    private final int maxBeds;
     private final float spawnRateMultiplier;
     private final float paymentMultiplier;
     
     TavernUpgrade(int reputationRequired, int moneyRequired, String displayName,
-                  int maxTables, int maxChairs, 
+                  int maxTables, int maxChairs, int maxBeds,
                   float spawnRateMultiplier, float paymentMultiplier) {
         this.reputationRequired = reputationRequired;
         this.moneyRequired = moneyRequired;
         this.displayName = displayName;
         this.maxTables = maxTables;
         this.maxChairs = maxChairs;
+        this.maxBeds = maxBeds;
         this.spawnRateMultiplier = spawnRateMultiplier;
         this.paymentMultiplier = paymentMultiplier;
     }
@@ -98,6 +104,14 @@ public enum TavernUpgrade {
     }
     
     /**
+     * Apply this upgrade to a SleepingManager
+     * Uses the stored benefit values
+     */
+    public void applyToSleepingManager(SleepingManager manager) {
+        manager.setMaxBeds(maxBeds);
+    }
+    
+    /**
      * Apply this upgrade to an EconomyManager
      * Uses the stored benefit values
      */
@@ -121,6 +135,14 @@ public enum TavernUpgrade {
      */
     public int getMaxChairs() {
         return maxChairs;
+    }
+    
+    /**
+     * Get the max beds this upgrade level provides
+     * Used for display and comparison
+     */
+    public int getMaxBeds() {
+        return maxBeds;
     }
     
     /**

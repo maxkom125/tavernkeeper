@@ -4,6 +4,7 @@ import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.TavernContext;
 import maxitoson.tavernkeeper.tavern.furniture.Chair;
+import maxitoson.tavernkeeper.tavern.furniture.types.DiningFurnitureType;
 import maxitoson.tavernkeeper.tavern.spaces.DiningSpace;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -94,21 +95,18 @@ public class DiningManager extends BaseDomainManager<DiningSpace> implements Din
     }
     
     /**
-     * Check if more tables can be added based on current upgrade level
+     * Check if more furniture of the given type can be added based on current upgrade limits
      * Implements DiningManagerContext interface
+     * 
+     * @param type the type of furniture to check
+     * @return true if furniture can be added, false if limit reached
      */
     @Override
-    public boolean canAddTable() {
-        return getTotalTableCount() < maxTables;
-    }
-    
-    /**
-     * Check if more chairs can be added based on current upgrade level
-     * Implements DiningManagerContext interface
-     */
-    @Override
-    public boolean canAddChair() {
-        return getTotalChairCount() < maxChairs;
+    public boolean canAddFurniture(DiningFurnitureType type) {
+        return switch (type) {
+            case TABLE -> getTotalTableCount() < maxTables;
+            case CHAIR -> getTotalChairCount() < maxChairs;
+        };
     }
     
     /**

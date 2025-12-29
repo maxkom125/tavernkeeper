@@ -3,6 +3,7 @@ package maxitoson.tavernkeeper.tavern.managers.domain;
 import maxitoson.tavernkeeper.areas.AreaType;
 import maxitoson.tavernkeeper.areas.TavernArea;
 import maxitoson.tavernkeeper.tavern.TavernContext;
+import maxitoson.tavernkeeper.tavern.furniture.types.SleepingFurnitureType;
 import maxitoson.tavernkeeper.tavern.spaces.SleepingSpace;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -24,8 +25,12 @@ public class SleepingManager extends BaseDomainManager<SleepingSpace> implements
     // Track which beds are occupied by which customers (not persisted - runtime state)
     private final Map<BlockPos, UUID> occupiedBeds = new HashMap<>();
     
+    // Upgrade-based limits (set by upgrade system)
+    private int maxBeds;
+    
     public SleepingManager(TavernContext tavern) {
         super(tavern);
+        this.maxBeds = 2; // Default: Level 1 = 2 beds
     }
     
     @Override
@@ -51,6 +56,23 @@ public class SleepingManager extends BaseDomainManager<SleepingSpace> implements
         return spaces.values().stream().mapToInt(SleepingSpace::getBedCount).sum();
     }
     
+    // ========== Upgrade System ==========
+    
+    /**
+     * Get the current maximum number of beds allowed
+     */
+    public int getMaxBeds() {
+        return maxBeds;
+    }
+    
+    /**
+     * Set the maximum number of beds (called by upgrade system)
+     */
+    public void setMaxBeds(int maxBeds) {
+        this.maxBeds = maxBeds;
+    }
+    
+    // ========== Bed Management ==========
     /**
      * Check if a bed is available (not occupied by another customer)
      */
@@ -120,5 +142,19 @@ public class SleepingManager extends BaseDomainManager<SleepingSpace> implements
             .min(java.util.Comparator.comparingDouble(bedPos -> 
                 bedPos.distSqr(from)
             ));
+    }
+    
+    /**
+     * Check if more furniture of the given type can be added based on current limits
+     * Implements SleepingManagerContext interface
+     * 
+     * @param type the type of furniture to check
+     * @return true if furniture can be added, false if limit reached
+     */
+    @Override
+    public boolean canAddFurniture(SleepingFurnitureType type) {
+        return switch (type) {
+            case BED -> getTotalBedCount() < maxBeds;
+        };
     }
 }
