@@ -21,12 +21,10 @@ import net.minecraft.world.phys.shapes.Shapes;
 public class ReceptionDeskBlock extends Block {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     
-    // Complex collision shape matching the visual model (base + pillar + slanted top)
-    // Pillar is wider to match the desk aesthetic
-    private static final VoxelShape BASE = Block.box(0.0, 0.0, 0.0, 16.0, 2.0, 16.0);
-    private static final VoxelShape PILLAR = Block.box(1.0, 2.0, 1.0, 15.0, 15.0, 15.0);
-    private static final VoxelShape TOP_SLAB = Block.box(0.0, 15.0, 0.0, 16.0, 16.0, 16.0);
-    protected static final VoxelShape SHAPE = Shapes.or(BASE, PILLAR, TOP_SLAB);
+    // Simple collision shape: full block base + small book on top
+    private static final VoxelShape BASE = Block.box(0.0, 0.0, 0.0, 16.0, 16.0, 16.0);
+    private static final VoxelShape BOOK = Block.box(4.0, 16.0, 3.0, 12.0, 18.0, 13.0);
+    protected static final VoxelShape SHAPE = Shapes.or(BASE, BOOK);
     
     public ReceptionDeskBlock(Properties properties) {
         super(properties);

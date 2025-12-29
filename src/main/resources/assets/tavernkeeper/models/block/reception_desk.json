@@ -8,47 +8,40 @@
         }
     },
     "textures": {
-        "particle": "tavernkeeper:block/lectern_sides",
-        "bottom": "minecraft:block/oak_planks",
-        "base": "tavernkeeper:block/lectern_base",
-        "front": "tavernkeeper:block/lectern_front",
-        "sides": "tavernkeeper:block/lectern_sides",
-        "top": "tavernkeeper:block/lectern_top"
+        "particle": "minecraft:block/acacia_planks",
+        "book_north": "tavernkeeper:block/reception_book_north",
+        "book_up": "tavernkeeper:block/reception_book_up",
+        "book_down": "minecraft:block/acacia_planks",
+        "bottom": "minecraft:block/acacia_planks",
+        "front": "tavernkeeper:block/reception_side",
+        "sides": "tavernkeeper:block/reception_side",
+        "top": "tavernkeeper:block/reception_top"
     },
     "elements": [
         {
+            "comment": "Base block (full block)",
             "from": [ 0, 0, 0 ],
-            "to": [ 16, 2, 16 ],
+            "to": [ 16, 16, 16 ],
             "faces": {
-                "north": { "uv": [ 0, 14, 16, 16 ], "texture": "#base", "cullface": "north" },
-                "east":  { "uv": [ 0,  6, 16,  8 ], "texture": "#base", "cullface": "east" },
-                "south": { "uv": [ 0,  6, 16,  8 ], "texture": "#base", "cullface": "south" },
-                "west":  { "uv": [ 0,  6, 16,  8 ], "texture": "#base", "cullface": "west" },
-                "up":    { "uv": [ 0,  0, 16, 16 ], "rotation": 180, "texture": "#base" },
-                "down":  { "uv": [ 0,  0, 16, 16 ], "texture": "#bottom", "cullface": "down" }
+                "north": { "uv": [ 0, 1, 16, 16 ], "texture": "#sides", "cullface": "north" },
+                "east":  { "uv": [ 0, 1, 16, 16 ], "texture": "#sides", "cullface": "east" },
+                "south": { "uv": [ 0, 1, 16, 16 ], "texture": "#sides", "cullface": "south" },
+                "west":  { "uv": [ 0, 1, 16, 16 ], "texture": "#sides", "cullface": "west" },
+                "up":    { "uv": [ 0, 0, 16, 16 ], "texture": "#top" },
+                "down":  { "uv": [ 0, 0, 16, 16 ], "texture": "#bottom", "cullface": "down" }
             }
         },
         {
-            "from": [4, 2, 4],
-            "to": [12, 15, 12],
+            "comment": "Book on top (small rectangular)",
+            "from": [ 3, 16, 4 ],
+            "to": [ 13, 18, 12 ],
             "faces": {
-                "north": { "uv": [ 0,  0,  8, 13 ], "texture": "#front" },
-                "east":  { "uv": [ 2, 16, 15,  8 ], "rotation": 90, "texture": "#sides" },
-                "south": { "uv": [ 8,  3, 16, 16 ], "texture": "#front" },
-                "west":  { "uv": [ 2,  8, 15, 16 ], "rotation": 90, "texture": "#sides" }
-            }
-        },
-        {
-            "from": [ 0.0125, 12, 3 ],
-            "to": [ 15.9875, 16, 16 ],
-            "rotation": { "angle": -22.5, "axis": "x", "origin": [ 8, 8, 8 ] },
-            "faces": {
-                "north": { "uv": [ 0, 0, 16,  4 ], "texture": "#sides" },
-                "east":  { "uv": [ 0, 4, 13,  8 ], "texture": "#sides" },
-                "south": { "uv": [ 0, 4, 16,  8 ], "texture": "#sides" },
-                "west":  { "uv": [ 0, 4, 13,  8 ], "texture": "#sides" },
-                "up":    { "uv": [ 0, 1, 16, 14 ], "rotation": 180, "texture": "#top" },
-                "down":  { "uv": [ 0, 0, 16, 13 ], "texture": "#bottom" }
+                "north": { "uv": [ 1, 7, 15, 8 ], "texture": "#book_north" },
+                "east":  { "uv": [ 9, 7, 15, 8 ], "texture": "#book_north" },
+                "south": { "uv": [ 1, 7, 15, 8 ], "texture": "#book_north" },
+                "west":  { "uv": [ 1, 7, 7, 8 ], "texture": "#book_north" },
+                "up":    { "uv": [ 3, 4, 13, 10 ], "texture": "#book_up" },
+                "down":  { "uv": [ 0, 0, 16, 16 ], "texture": "#book_down" }
             }
         }
     ]
