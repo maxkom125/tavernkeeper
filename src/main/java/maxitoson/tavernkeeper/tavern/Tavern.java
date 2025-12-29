@@ -556,9 +556,13 @@ public class Tavern extends SavedData implements TavernContext {
      * Delegates to EconomyManager.
      * Used by customer AI when they decide to sleep.
      * 
-     * @return A randomly generated sleeping request
+     * @return A randomly generated sleeping request, or null if tavern level is too low
      */
     public SleepingRequest createSleepingRequest() {
+        // Sleeping requests only available from level 2+
+        if (getCurrentUpgrade() == TavernUpgrade.LEVEL_1) {
+            return null;
+        }
         return economyManager.createSleepingRequest();
     }
     

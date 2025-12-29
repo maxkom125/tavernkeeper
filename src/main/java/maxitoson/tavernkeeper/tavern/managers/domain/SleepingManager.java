@@ -30,7 +30,7 @@ public class SleepingManager extends BaseDomainManager<SleepingSpace> implements
     
     public SleepingManager(TavernContext tavern) {
         super(tavern);
-        this.maxBeds = 2; // Default: Level 1 = 2 beds
+        this.maxBeds = 0; // Default
     }
     
     @Override

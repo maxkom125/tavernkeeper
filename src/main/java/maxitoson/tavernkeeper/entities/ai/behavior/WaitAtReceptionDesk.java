@@ -42,6 +42,16 @@ public class WaitAtReceptionDesk extends Behavior<CustomerEntity> {
         // Get sleeping request from tavern -> economy manager
         TavernContext tavern = Tavern.get(level);
         SleepingRequest request = tavern.createSleepingRequest();
+        
+        // Defensive check: sleeping requests only available from level 2+
+        if (request == null) {
+            LOGGER.warn("Customer {} tried to request sleeping but tavern level is too low - customer will leave", 
+                customer.getId());
+            // Transition customer to leaving state
+            customer.transitionToNextState(level);
+            return;
+        }
+        
         customer.setRequest(request);
         
         // Hold money in hand (no item on head)

@@ -225,7 +225,7 @@ public class CustomerManager {
         
         // Assign lifecycle (determines entire customer journey)
         // Factory uses probabilities: X% dining, Y% sleeping, Z% full service
-        CustomerLifecycle lifecycle = CustomerLifecycleFactory.create(level, random);
+        CustomerLifecycle lifecycle = CustomerLifecycleFactory.create(tavern, random);
         customer.setLifecycle(lifecycle);
         
         // Finalize spawn (from Raid.java line 613)

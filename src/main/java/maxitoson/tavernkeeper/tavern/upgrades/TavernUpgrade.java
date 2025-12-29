@@ -22,7 +22,7 @@ public enum TavernUpgrade {
         // Benefits
         2,      // Max tables
         8,      // Max chairs
-        2,      // Max beds
+        0,      // Max beds
         1.0f,   // Spawn rate multiplier
         1.0f    // Payment multiplier
     ),
@@ -35,7 +35,7 @@ public enum TavernUpgrade {
         // Benefits
         4,      // Max tables
         16,     // Max chairs
-        4,      // Max beds
+        2,      // Max beds
         1.1f,   // Spawn rate multiplier (10% faster)
         1.1f    // Payment multiplier (+10%)
     ),
@@ -48,7 +48,7 @@ public enum TavernUpgrade {
         // Benefits
         8,      // Max tables
         32,     // Max chairs
-        8,      // Max beds
+        4,      // Max beds
         1.3f,   // Spawn rate multiplier (30% faster)
         1.3f    // Payment multiplier (+30%)
     );

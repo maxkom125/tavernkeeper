@@ -15,7 +15,7 @@
 - [ ] Fix weird chair reservation
 - [x] Limit number of reception desks and lecterns
 - [x] Add proper reception desk texture
-- [ ] Start sleeping requests only from tavern level 2
+- [x] Start sleeping requests only from tavern level 2
 
 ### Medium Priority
 - [ ] **Customer Variety**

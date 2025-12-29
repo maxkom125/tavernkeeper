@@ -1,7 +1,8 @@
 package maxitoson.tavernkeeper.entities.ai.lifecycle;
 
 import maxitoson.tavernkeeper.entities.ai.LifecycleType;
-import net.minecraft.server.level.ServerLevel;
+import maxitoson.tavernkeeper.tavern.TavernContext;
+import maxitoson.tavernkeeper.tavern.upgrades.TavernUpgrade;
 import net.minecraft.util.RandomSource;
 
 /**
@@ -18,11 +19,20 @@ public class CustomerLifecycleFactory {
     /**
      * Create a lifecycle for a new customer
      * 
-     * @param level The server level (for future context-aware decisions)
+     * @param tavern The tavern context (for context-aware decisions based on tavern level)
      * @param random Random source for probability
      * @return A new CustomerLifecycle instance
      */
-    public static CustomerLifecycle create(ServerLevel level, RandomSource random) {
+    public static CustomerLifecycle create(TavernContext tavern, RandomSource random) {
+        // Check tavern level - sleeping customers only available from level 2+
+        TavernUpgrade currentLevel = tavern.getCurrentUpgrade();
+        
+        // Level 1: Only dining customers (no sleeping)
+        if (currentLevel == TavernUpgrade.LEVEL_1) {
+            return new DiningOnlyLifecycle();
+        }
+        
+        // Level 2+: Normal probability distribution
         float roll = random.nextFloat();
         
         if (roll < DINING_ONLY_THRESHOLD) {

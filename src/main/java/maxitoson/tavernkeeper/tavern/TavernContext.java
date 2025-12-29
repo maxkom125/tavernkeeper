@@ -182,5 +182,11 @@ public interface TavernContext {
      * Used by WaitAtReceptionDesk behavior when customer requests room
      */
     SleepingRequest createSleepingRequest();
+    
+    /**
+     * Get current tavern upgrade level
+     * Used by CustomerLifecycleFactory to determine available customer types
+     */
+    maxitoson.tavernkeeper.tavern.upgrades.TavernUpgrade getCurrentUpgrade();
 }
 

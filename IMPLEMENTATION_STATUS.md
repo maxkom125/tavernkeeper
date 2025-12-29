@@ -70,7 +70,8 @@ tavernkeeper/
 │   │   └── system/    # System managers (meta-game state)
 │   │       └── UpgradeManager, AdvancementManager, EconomyManager
 │   ├── spaces/     # DiningSpace, ServiceSpace, SleepingSpace
-│   ├── furniture/  # Chair, Table, ServiceLectern, ServiceBarrel
+│   ├── furniture/  # Chair, Table, ServiceLectern, ServiceBarrel, Bed
+│   │   └── types/  # Furniture type enums (DiningFurnitureType, etc.)
 │   ├── economy/    # FoodRequest, Price, CoinRegistry
 │   └── upgrades/   # TavernUpgrade (enum), UpgradeDetails, UpgradeFormatter
 ├── client/         # CustomerEntityRenderer, FoodRequestLayer
@@ -84,6 +85,7 @@ tavernkeeper/
   - **Macaw's Furniture**: Automatically recognizes chairs, tables, desks, counters, stools (soft dependency)
 - **Sleeping Areas**: Beds (with reservation system)
 - **Service Areas**: Lecterns (food service) + Reception Desks (sleeping service)
+- **Furniture Limits**: Enforced by upgrade level
 - **Optimized**: Only updates specific block position, no full rescans
 - **Smart validation**: Chairs must face tables and have air block above to be valid
 - **Reservation System**: Prevents multiple customers from targeting same chair/bed
