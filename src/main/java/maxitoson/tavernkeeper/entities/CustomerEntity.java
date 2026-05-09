@@ -386,18 +386,6 @@ public class CustomerEntity extends AbstractVillager {
                     tag.getString("LifecycleType"));
                 this.lifecycle = CustomerLifecycleFactory.fromType(LifecycleType.DINING_ONLY);
             }
-        } else if (tag.contains("CustomerType")) {
-            // Backward compatibility: old saves have CustomerType instead of LifecycleType
-            // TODO: Remove this in the next commit
-            try {
-                LifecycleType type = LifecycleType.valueOf(tag.getString("CustomerType"));
-                this.lifecycle = CustomerLifecycleFactory.fromType(type);
-                LOGGER.debug("Migrated old CustomerType {} to lifecycle for customer {}", type, this.getId());
-            } catch (IllegalArgumentException e) {
-                LOGGER.warn("Invalid customer type in NBT: {}, defaulting to DINING_ONLY", 
-                    tag.getString("CustomerType"));
-                this.lifecycle = CustomerLifecycleFactory.fromType(LifecycleType.DINING_ONLY);
-            }
         }
         
         // Load target position if exists

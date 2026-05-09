@@ -50,8 +50,11 @@ public class ModeInputHandler {
         }
         lastScrollTime = currentTime;
         
-        // Get scroll direction - use the vertical scroll amount
-        double scrollDelta = event.getScrollDeltaY();
+        // Prefer vertical scroll, but handle hardware that reports Shift-scroll as X-axis.
+        // On some mice + OS combinations, holding Shift turns wheel movement into horizontal scroll.
+        double scrollDeltaY = event.getScrollDeltaY();
+        double scrollDeltaX = event.getScrollDeltaX();
+        double scrollDelta = Math.abs(scrollDeltaY) > 0 ? scrollDeltaY : scrollDeltaX;
         
         if (scrollDelta == 0) return;
         
