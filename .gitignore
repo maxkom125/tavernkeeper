@@ -29,8 +29,16 @@ bin/
 # Mac
 .DS_Store
 
+# AI stuff
+CLAUDE.md
+.claude/
+.cursor/
+
 # Minecraft client/server files
 run/
+
+# Data generator cache (volatile, not needed in VCS)
+src/generated/resources/.cache/
 
 # Logs
 logs/

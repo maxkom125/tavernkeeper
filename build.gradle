@@ -179,6 +179,15 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }
 
+// Wipe the GameTest world before each run so Tavern SavedData doesn't accumulate
+// across runs and exhaust per-level furniture limits (MAX_LECTERNS=1, etc.)
+tasks.register('cleanGameTestWorld', Delete) {
+    delete layout.projectDirectory.dir('run/world')
+}
+tasks.named('runGameTestServer').configure {
+    dependsOn 'cleanGameTestWorld'
+}
+
 // IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
 idea {
     module {
