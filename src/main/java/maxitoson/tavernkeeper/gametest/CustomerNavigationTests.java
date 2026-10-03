@@ -13,6 +13,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
+import java.util.function.Consumer;
+
 import static maxitoson.tavernkeeper.gametest.TavernTestSupport.*;
 
 /**
@@ -36,15 +38,26 @@ public class CustomerNavigationTests {
     }
 
     /**
-     * The table stands between the customer and the chair: the customer must not get stuck
-     * against the table while closing in on the chair.
+     * The table stands between the customer and the chair, extended into a counter so that no spot
+     * inside the sit radius is reachable from the customer's side: the customer has to walk AROUND
+     * the counter and sit down from the chair's side.
      */
     @GameTest(template = FLAT_15, batch = "nav_table_between", timeoutTicks = 400)
     public static void customerWalksAroundTableToChair(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        // Table at x=7, chair on its east side; customer starts west of the table
+        // Table at x=7, chair on its east side (x=8); customer starts west of the table
         BlockPos chair = placeTableWithChair(helper, new BlockPos(7, 2, 7), Direction.EAST);
-        runSeatingScenario(helper, tavern, chair, new BlockPos(2, 2, 7));
+        // Counter: fences continue the table along x=7, so the chair side is only reachable around its ends
+        for (int z = 3; z <= 11; z++) {
+            if (z != 7) {
+                helper.setBlock(new BlockPos(7, 2, z), Blocks.OAK_FENCE);
+            }
+        }
+        // (6,2,7) is the only near-side spot within the sit radius - block it
+        helper.setBlock(new BlockPos(6, 2, 7), Blocks.OAK_FENCE);
+        runSeatingScenario(helper, tavern, chair, new BlockPos(2, 2, 7),
+                arrival -> helper.assertTrue(arrival.getX() >= 8,
+                        "Customer sat down from " + arrival + ", on the near side of the table"));
     }
 
     /** A row of fences (can't be jumped) blocks the direct line; the customer goes around its end. */
@@ -79,6 +92,12 @@ public class CustomerNavigationTests {
      *  - ends up EATING, riding a seat on that exact chair
      */
     private static void runSeatingScenario(GameTestHelper helper, Tavern tavern, BlockPos relChair, BlockPos relSpawn) {
+        runSeatingScenario(helper, tavern, relChair, relSpawn, arrival -> {});
+    }
+
+    /** @param arrivalCheck extra assertion on the RELATIVE position the customer last walked on before sitting */
+    private static void runSeatingScenario(GameTestHelper helper, Tavern tavern, BlockPos relChair, BlockPos relSpawn,
+                                           Consumer<BlockPos> arrivalCheck) {
         diningArea(helper, tavern, new BlockPos(0, 2, 0), new BlockPos(14, 4, 14));
         BlockPos chair = helper.absolutePos(relChair);
         helper.assertTrue(tavern.getDiningManager().getSpaces().iterator().next().getValidChairCount() == 1,
@@ -108,6 +127,7 @@ public class CustomerNavigationTests {
             helper.assertTrue(walk.lastWalkingPos().distSqr(chair) <= reach * reach,
                     "Customer sat down from " + helper.relativePos(walk.lastWalkingPos())
                     + ", outside the " + reach + "-block sit radius");
+            arrivalCheck.accept(helper.relativePos(walk.lastWalkingPos()));
         });
     }
 }
