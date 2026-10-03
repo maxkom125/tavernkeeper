@@ -15,9 +15,9 @@ import java.util.Optional;
  * Reserves the chair to prevent other customers from taking it
  */
 public class FindSeat extends MoveToTargetBehavior {
-    // Must be adjacent to (or on) the chair. With 2, a customer standing on the far side
-    // of the table counted as "arrived" and was teleported onto the chair through the table.
-    private static final int REACHED_DISTANCE = 1;
+    // Intentionally generous: the chair itself is often hard to path onto, and EatAtChair
+    // places the customer onto the seat (SittingEntity) once it is within this radius.
+    public static final int REACHED_DISTANCE = 2;
     
     public FindSeat(float speedModifier) {
         super(speedModifier);

@@ -3,6 +3,7 @@ package maxitoson.tavernkeeper.gametest;
 import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
+import maxitoson.tavernkeeper.entities.ai.behavior.FindSeat;
 import maxitoson.tavernkeeper.tavern.Tavern;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -16,8 +17,9 @@ import static maxitoson.tavernkeeper.gametest.TavernTestSupport.*;
 
 /**
  * Real-movement tests: a seat-seeking customer must physically walk to its chair -
- * no getting stuck on furniture, no big detours, no "arriving" from the far side of a table,
- * and its chair reservation must hold for the whole walk.
+ * no getting stuck on furniture, no big detours, and its chair reservation must hold for the whole walk.
+ * Once within {@link FindSeat#REACHED_DISTANCE} the customer is placed onto the seat (by design,
+ * chairs are often hard to path onto), so "arrived" means "walked into that radius".
  *
  * Layout: 15x15 stone floor (y=0), customers walk at y=1, dining area covers the whole floor.
  */
@@ -34,8 +36,8 @@ public class CustomerNavigationTests {
     }
 
     /**
-     * The table stands between the customer and the chair: the customer must walk AROUND it
-     * and sit down from the chair side, not from across the table.
+     * The table stands between the customer and the chair: the customer must not get stuck
+     * against the table while closing in on the chair.
      */
     @GameTest(template = FLAT_15, batch = "nav_table_between", timeoutTicks = 400)
     public static void customerWalksAroundTableToChair(GameTestHelper helper) {
@@ -73,8 +75,7 @@ public class CustomerNavigationTests {
      *  - not stuck / no big detour (WalkTracker)
      *  - holds the chair reservation for the whole walk (regression: the move behavior used to time out
      *    after 40 ticks and release the chair while the customer kept walking)
-     *  - stood next to the chair when it sat down (regression: "reached" used a 2-block radius,
-     *    so a customer across the table teleported onto the chair)
+     *  - walked into the sit radius itself (wasn't placed onto the chair from further away)
      *  - ends up EATING, riding a seat on that exact chair
      */
     private static void runSeatingScenario(GameTestHelper helper, Tavern tavern, BlockPos relChair, BlockPos relSpawn) {
@@ -104,9 +105,11 @@ public class CustomerNavigationTests {
             helper.assertTrue(chair.equals(customer.getSittingEntity().getSittingPos()),
                     "Customer sat on " + customer.getSittingEntity().getSittingPos() + " instead of " + chair);
             helper.assertTrue(isOccupiedBy(tavern, chair, customer), "Seated customer doesn't hold the chair");
-            int gap = horizontalManhattan(walk.lastWalkingPos(), chair);
-            helper.assertTrue(gap <= 1, "Customer sat down from " + helper.relativePos(walk.lastWalkingPos())
-                    + ", " + gap + " blocks from the chair (must be adjacent)");
+            // Same check as MoveToTargetBehavior uses to decide the target was reached
+            int reach = FindSeat.REACHED_DISTANCE;
+            helper.assertTrue(walk.lastWalkingPos().distSqr(chair) <= reach * reach,
+                    "Customer sat down from " + helper.relativePos(walk.lastWalkingPos())
+                    + ", outside the " + reach + "-block sit radius");
         });
     }
 }

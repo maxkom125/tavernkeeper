@@ -231,9 +231,4 @@ public final class TavernTestSupport {
             return Math.sqrt(dx * dx + dz * dz);
         }
     }
-
-    /** Horizontal block distance (ignores height), for "stood next to" checks. */
-    public static int horizontalManhattan(BlockPos a, BlockPos b) {
-        return Math.abs(a.getX() - b.getX()) + Math.abs(a.getZ() - b.getZ());
-    }
 }
