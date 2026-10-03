@@ -57,7 +57,31 @@ Run a fully functional tavern in Minecraft:
 ```bash
 make build    # Compile
 make run      # Test in-game
+make test     # Run all GameTests headless (same as CI)
 ```
+
+### Testing
+Behaviour is tested with Minecraft's **GameTest** framework: each test runs on a real (headless) server,
+in a real structure, with real customers walking, pathfinding and ticking their AI. Tests live in
+`src/main/java/maxitoson/tavernkeeper/gametest/` and run in CI after every push.
+
+- **Run:** `make test` (CI does the same). Or in a dev client (`make run`): `/test runall`,
+  `/test runthis` (test you're looking at), `/test runfailed`. Note: tests reset the tavern of the world they run in.
+- **Write a test:** a `public static void` method taking `GameTestHelper`, annotated
+  `@GameTest(template = FLAT_15, batch = "unique_name")` in a class with `@GameTestHolder(TavernKeeperMod.MODID)`
+  and `@PrefixGameTestTemplate(false)`. Positions are relative to the structure; the floor is `y=0`, stand at `y=1`.
+- **Isolation (important):** the `Tavern` is shared by the whole level, and tests inside one batch run at the same time.
+  So any test touching the tavern gets its **own batch** and starts with `TavernTestSupport.freshTavern(helper)`
+  (new empty tavern, closed so no random customers spawn).
+- **Build the scene in code** with `TavernTestSupport` helpers (`placeTableWithChair`, `placeBed`, `diningArea`, `spawnSeatSeeker`, `upgradeTo`, ...),
+  on the flat templates (`FLAT_7`, `FLAT_15`). For a new template add it to `TestStructureProvider` and run `./gradlew runData`.
+- **Assert outcomes, not timings:** prefer `helper.succeedWhen(...)` (retried every tick until it passes or times out) and
+  `helper.startSequence().thenWaitUntil(...).thenExecute(...)` over fixed `runAfterDelay` checks.
+  Keep `timeoutTicks` close to what the scenario needs.
+- **Movement tests** should check *how* the customer got there, not just the final state: use `WalkTracker`
+  (fails on getting stuck or big detours) and assert where the customer stood when it arrived.
+- **Players:** `helper.makeMockPlayer(GameType.SURVIVAL)` gives a player to serve customers with.
+- **Bug fixes:** add a test that fails without the fix (see the "Regression:" notes in existing tests).
 
 ### Architecture
 Built using Domain-Driven Design (DDD) with clean layered architecture:
