@@ -47,8 +47,9 @@ public class WaitAtReceptionDesk extends Behavior<CustomerEntity> {
         if (request == null) {
             LOGGER.warn("Customer {} tried to request sleeping but tavern level is too low - customer will leave", 
                 customer.getId());
-            // Transition customer to leaving state
-            customer.transitionToNextState(level);
+            // Leave directly - the lifecycle's next state would be FINDING_BED,
+            // and there is nothing to sleep in without a paid request
+            customer.setCustomerState(CustomerState.LEAVING);
             return;
         }
         

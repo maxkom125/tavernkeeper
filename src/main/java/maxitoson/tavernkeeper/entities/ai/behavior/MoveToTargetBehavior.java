@@ -27,6 +27,9 @@ public abstract class MoveToTargetBehavior extends Behavior<CustomerEntity> {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int COOLDOWN_TICKS = 20; // Check every second
     private static final int MAX_DISTANCE = 48; // Same as FOLLOW_RANGE
+    // Max time to walk to one target before giving up and re-searching.
+    // Must comfortably exceed a normal walk: when the behavior times out, the reservation is released.
+    private static final int MAX_WALK_TICKS = 1200; // 60 seconds
     
     private final float speedModifier;
     private long nextCheckTime = 0;
@@ -38,7 +41,7 @@ public abstract class MoveToTargetBehavior extends Behavior<CustomerEntity> {
                 MemoryModuleType.WALK_TARGET, MemoryStatus.VALUE_ABSENT,
                 MemoryModuleType.LOOK_TARGET, MemoryStatus.REGISTERED
             ),
-            COOLDOWN_TICKS * 2
+            MAX_WALK_TICKS
         );
         this.speedModifier = speedModifier;
     }
@@ -202,6 +205,10 @@ public abstract class MoveToTargetBehavior extends Behavior<CustomerEntity> {
                 LOGGER.debug("Customer {} didn't reach {} at {}",
                     customer.getId(), getTargetName(), targetPosition);
                 releaseTarget(tavern, targetPosition);
+                // Stop walking to the released target - otherwise the customer keeps
+                // walking to a target it no longer holds (and this behavior can't restart,
+                // since it requires WALK_TARGET to be absent)
+                customer.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
             }
         }
         
