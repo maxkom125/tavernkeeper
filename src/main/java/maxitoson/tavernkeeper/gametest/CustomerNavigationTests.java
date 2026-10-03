@@ -31,8 +31,8 @@ public class CustomerNavigationTests {
     @GameTest(template = FLAT_15, batch = "nav_open_floor", timeoutTicks = 400)
     public static void customerWalksStraightToChair(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        BlockPos chair = placeTableWithChair(helper, new BlockPos(13, 1, 7), Direction.WEST);
-        runSeatingScenario(helper, tavern, chair, new BlockPos(1, 1, 7));
+        BlockPos chair = placeTableWithChair(helper, new BlockPos(13, 2, 7), Direction.WEST);
+        runSeatingScenario(helper, tavern, chair, new BlockPos(1, 2, 7));
     }
 
     /**
@@ -43,8 +43,8 @@ public class CustomerNavigationTests {
     public static void customerWalksAroundTableToChair(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
         // Table at x=7, chair on its east side; customer starts west of the table
-        BlockPos chair = placeTableWithChair(helper, new BlockPos(7, 1, 7), Direction.EAST);
-        runSeatingScenario(helper, tavern, chair, new BlockPos(2, 1, 7));
+        BlockPos chair = placeTableWithChair(helper, new BlockPos(7, 2, 7), Direction.EAST);
+        runSeatingScenario(helper, tavern, chair, new BlockPos(2, 2, 7));
     }
 
     /** A row of fences (can't be jumped) blocks the direct line; the customer goes around its end. */
@@ -52,10 +52,10 @@ public class CustomerNavigationTests {
     public static void customerWalksAroundFenceRowToChair(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
         for (int z = 3; z <= 11; z++) {
-            helper.setBlock(new BlockPos(7, 1, z), Blocks.OAK_FENCE);
+            helper.setBlock(new BlockPos(7, 2, z), Blocks.OAK_FENCE);
         }
-        BlockPos chair = placeTableWithChair(helper, new BlockPos(13, 1, 7), Direction.WEST);
-        runSeatingScenario(helper, tavern, chair, new BlockPos(2, 1, 7));
+        BlockPos chair = placeTableWithChair(helper, new BlockPos(13, 2, 7), Direction.WEST);
+        runSeatingScenario(helper, tavern, chair, new BlockPos(2, 2, 7));
     }
 
     /** A 2-high wall splits the room with a single gap at the far edge: long detour, long walk. */
@@ -63,11 +63,11 @@ public class CustomerNavigationTests {
     public static void customerFindsGapInWallToReachChair(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
         for (int z = 0; z <= 12; z++) {
-            helper.setBlock(new BlockPos(7, 1, z), Blocks.STONE_BRICKS);
             helper.setBlock(new BlockPos(7, 2, z), Blocks.STONE_BRICKS);
+            helper.setBlock(new BlockPos(7, 3, z), Blocks.STONE_BRICKS);
         }
-        BlockPos chair = placeTableWithChair(helper, new BlockPos(13, 1, 2), Direction.WEST);
-        runSeatingScenario(helper, tavern, chair, new BlockPos(2, 1, 2));
+        BlockPos chair = placeTableWithChair(helper, new BlockPos(13, 2, 2), Direction.WEST);
+        runSeatingScenario(helper, tavern, chair, new BlockPos(2, 2, 2));
     }
 
     /**
@@ -79,7 +79,7 @@ public class CustomerNavigationTests {
      *  - ends up EATING, riding a seat on that exact chair
      */
     private static void runSeatingScenario(GameTestHelper helper, Tavern tavern, BlockPos relChair, BlockPos relSpawn) {
-        diningArea(helper, tavern, new BlockPos(0, 1, 0), new BlockPos(14, 3, 14));
+        diningArea(helper, tavern, new BlockPos(0, 2, 0), new BlockPos(14, 4, 14));
         BlockPos chair = helper.absolutePos(relChair);
         helper.assertTrue(tavern.getDiningManager().getSpaces().iterator().next().getValidChairCount() == 1,
                 "Expected exactly one valid chair in the layout");

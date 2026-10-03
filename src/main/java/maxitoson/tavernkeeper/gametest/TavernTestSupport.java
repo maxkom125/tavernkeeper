@@ -35,6 +35,8 @@ import java.util.UUID;
  *   2. call {@link #freshTavern(GameTestHelper)} first.
  *
  * All positions passed to these helpers are RELATIVE to the test structure (like GameTestHelper).
+ * The structure sits one block above the structure block, so the flat templates' stone floor is at
+ * y=1: stand customers and place furniture at y=2.
  */
 public final class TavernTestSupport {
 
@@ -165,7 +167,8 @@ public final class TavernTestSupport {
         private final GameTestHelper helper;
         private final CustomerEntity customer;
         private final CustomerState walkingState;
-        private final double routeLength;
+        private final BlockPos target;
+        private double routeLength = -1; // computed once the customer stands on the ground
         private final Deque<Vec3> window = new ArrayDeque<>();
         private Vec3 last;
         private double walked;
@@ -175,10 +178,7 @@ public final class TavernTestSupport {
             this.helper = helper;
             this.customer = customer;
             this.walkingState = walkingState;
-            Path path = customer.getNavigation().createPath(absTarget, 1);
-            helper.assertTrue(path != null && path.canReach(),
-                    "Pathfinder found no route from " + customer.blockPosition() + " to " + absTarget);
-            this.routeLength = length(path);
+            this.target = absTarget;
             this.last = customer.position();
             this.lastWalkingPos = customer.blockPosition();
         }
@@ -186,6 +186,19 @@ public final class TavernTestSupport {
         public void tick() {
             if (customer.isRemoved() || customer.getCustomerState() != walkingState || customer.isPassenger()) {
                 return;
+            }
+            if (routeLength < 0) {
+                // Vanilla navigation refuses to plan a path while the mob is still in the air
+                if (!customer.onGround()) {
+                    return;
+                }
+                Path path = customer.getNavigation().createPath(target, 1);
+                if (path == null || !path.canReach()) {
+                    helper.fail("Pathfinder found no route from " + helper.relativePos(customer.blockPosition())
+                            + " to " + helper.relativePos(target));
+                }
+                routeLength = length(path);
+                last = customer.position();
             }
             Vec3 now = customer.position();
             walked += horizontalDistance(now, last);

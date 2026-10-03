@@ -35,14 +35,14 @@ import static maxitoson.tavernkeeper.gametest.TavernTestSupport.*;
 @PrefixGameTestTemplate(false)
 public class CustomerServiceFlowTests {
 
-    private static final BlockPos LECTERN = new BlockPos(7, 1, 12);
+    private static final BlockPos LECTERN = new BlockPos(7, 2, 12);
 
     /** Builds lectern + service area (south side) and one table/chair in a dining area (north side). */
     private static BlockPos buildDiningTavern(GameTestHelper helper, Tavern tavern) {
         helper.setBlock(LECTERN, Blocks.LECTERN);
-        serviceArea(helper, tavern, new BlockPos(5, 1, 10), new BlockPos(9, 3, 14));
-        BlockPos chair = placeTableWithChair(helper, new BlockPos(7, 1, 3), Direction.SOUTH);
-        diningArea(helper, tavern, new BlockPos(0, 1, 0), new BlockPos(14, 3, 8));
+        serviceArea(helper, tavern, new BlockPos(5, 2, 10), new BlockPos(9, 4, 14));
+        BlockPos chair = placeTableWithChair(helper, new BlockPos(7, 2, 3), Direction.SOUTH);
+        diningArea(helper, tavern, new BlockPos(0, 2, 0), new BlockPos(14, 4, 8));
         return helper.absolutePos(chair);
     }
 
@@ -69,7 +69,7 @@ public class CustomerServiceFlowTests {
     public static void diningCustomerFullJourney(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
         BlockPos chair = buildDiningTavern(helper, tavern);
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 1, 12), LifecycleType.DINING_ONLY);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 2, 12), LifecycleType.DINING_ONLY);
         Player player = playerHolding(helper, new ItemStack(Items.CARROT, 64));
         FoodRequest[] order = {null};
         boolean[] ate = {false};
@@ -110,7 +110,7 @@ public class CustomerServiceFlowTests {
     public static void wrongFoodIsRejected(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
         buildDiningTavern(helper, tavern);
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 1, 12), LifecycleType.DINING_ONLY);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 2, 12), LifecycleType.DINING_ONLY);
         Player player = playerHolding(helper, new ItemStack(Items.BREAD, 64));
 
         helper.startSequence()
@@ -133,7 +133,7 @@ public class CustomerServiceFlowTests {
     @GameTest(template = FLAT_7, batch = "flow_not_waiting")
     public static void customerNotWaitingIgnoresService(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 1, 3), LifecycleType.DINING_ONLY);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 2, 3), LifecycleType.DINING_ONLY);
         Player player = playerHolding(helper, new ItemStack(Items.CARROT, 64));
 
         ServiceResult result = tavern.handlePlayerServe(player, customer, player.getMainHandItem());
@@ -150,13 +150,13 @@ public class CustomerServiceFlowTests {
         upgradeTo(tavern, TavernUpgrade.LEVEL_2);
         helper.getLevel().setDayTime(13000); // night: sleepers only wake up in the morning
 
-        helper.setBlock(new BlockPos(12, 1, 12), TavernKeeperMod.RECEPTION_DESK.get());
-        serviceArea(helper, tavern, new BlockPos(10, 1, 10), new BlockPos(14, 3, 14));
-        BlockPos bed = helper.absolutePos(placeBed(helper, new BlockPos(12, 1, 3), Direction.NORTH));
-        sleepingArea(helper, tavern, new BlockPos(9, 1, 0), new BlockPos(14, 3, 6));
+        helper.setBlock(new BlockPos(12, 2, 12), TavernKeeperMod.RECEPTION_DESK.get());
+        serviceArea(helper, tavern, new BlockPos(10, 2, 10), new BlockPos(14, 4, 14));
+        BlockPos bed = helper.absolutePos(placeBed(helper, new BlockPos(12, 2, 3), Direction.NORTH));
+        sleepingArea(helper, tavern, new BlockPos(9, 2, 0), new BlockPos(14, 4, 6));
         helper.assertValueEqual(tavern.getSleepingManager().getTotalBedCount(), 1, "beds recognized");
 
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 1, 7), LifecycleType.SLEEPING_ONLY);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 2, 7), LifecycleType.SLEEPING_ONLY);
         Player player = playerHolding(helper, ItemStack.EMPTY);
         long moneyBefore = tavern.getTotalMoneyEarned();
 

@@ -78,7 +78,7 @@ public class TavernProgressionTests {
     public static void customerDeathCostsReputation(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
         tavern.adjustReputation(30);
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 1, 3), LifecycleType.DINING_ONLY);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 2, 3), LifecycleType.DINING_ONLY);
         customer.kill();
         helper.assertValueEqual(tavern.getReputation(), 10, "reputation after a customer died (-20)");
         helper.succeed();
@@ -92,9 +92,9 @@ public class TavernProgressionTests {
         Player bob = helper.makeMockPlayer(GameType.SURVIVAL);
 
         var first = tavern.createArea(AreaType.DINING,
-                helper.absolutePos(new BlockPos(0, 1, 0)), helper.absolutePos(new BlockPos(4, 3, 4)), alice);
+                helper.absolutePos(new BlockPos(0, 2, 0)), helper.absolutePos(new BlockPos(4, 4, 4)), alice);
         var second = tavern.createArea(AreaType.DINING,
-                helper.absolutePos(new BlockPos(6, 1, 0)), helper.absolutePos(new BlockPos(10, 3, 4)), bob);
+                helper.absolutePos(new BlockPos(6, 2, 0)), helper.absolutePos(new BlockPos(10, 4, 4)), bob);
         helper.assertTrue(first.becameOwner(), "First area creator should become owner");
         helper.assertFalse(second.becameOwner(), "Second creator must not take over");
         helper.assertTrue(tavern.isOwner(alice.getUUID()), "Owner should be the first creator");
@@ -107,7 +107,7 @@ public class TavernProgressionTests {
         helper.assertFalse(tavern.hasOwner(), "Tavern should have no owner");
 
         var third = tavern.createArea(AreaType.DINING,
-                helper.absolutePos(new BlockPos(0, 1, 6)), helper.absolutePos(new BlockPos(4, 3, 10)), bob);
+                helper.absolutePos(new BlockPos(0, 2, 6)), helper.absolutePos(new BlockPos(4, 4, 10)), bob);
         helper.assertValueEqual(third.getCreatedArea().getName(), "#3", "numbers are never reused");
         helper.assertTrue(tavern.isOwner(bob.getUUID()), "Next creator should own the empty tavern");
         helper.succeed();
@@ -126,15 +126,15 @@ public class TavernProgressionTests {
         upgradeTo(tavern, TavernUpgrade.LEVEL_2);
         tavern.recordSale(123);
 
-        placeBed(helper, new BlockPos(2, 1, 12), Direction.NORTH);
-        placeBed(helper, new BlockPos(6, 1, 12), Direction.NORTH);
+        placeBed(helper, new BlockPos(2, 2, 12), Direction.NORTH);
+        placeBed(helper, new BlockPos(6, 2, 12), Direction.NORTH);
         tavern.createArea(AreaType.SLEEPING,
-                helper.absolutePos(new BlockPos(0, 1, 9)), helper.absolutePos(new BlockPos(14, 3, 14)), owner);
+                helper.absolutePos(new BlockPos(0, 2, 9)), helper.absolutePos(new BlockPos(14, 4, 14)), owner);
         for (int x = 2; x <= 10; x += 4) {
-            placeTableWithChair(helper, new BlockPos(x, 1, 2), Direction.SOUTH);
+            placeTableWithChair(helper, new BlockPos(x, 2, 2), Direction.SOUTH);
         }
         tavern.createArea(AreaType.DINING,
-                helper.absolutePos(new BlockPos(0, 1, 0)), helper.absolutePos(new BlockPos(14, 3, 6)), owner);
+                helper.absolutePos(new BlockPos(0, 2, 0)), helper.absolutePos(new BlockPos(14, 4, 6)), owner);
         helper.assertValueEqual(tavern.getSleepingManager().getTotalBedCount(), 2, "beds before save");
         helper.assertValueEqual(tavern.getDiningManager().getTotalTableCount(), 3, "tables before save");
 

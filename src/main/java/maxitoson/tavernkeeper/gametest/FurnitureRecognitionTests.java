@@ -27,8 +27,8 @@ import static maxitoson.tavernkeeper.gametest.TavernTestSupport.*;
 @PrefixGameTestTemplate(false)
 public class FurnitureRecognitionTests {
 
-    private static final BlockPos MIN = new BlockPos(0, 1, 0);
-    private static final BlockPos MAX_15 = new BlockPos(14, 3, 14);
+    private static final BlockPos MIN = new BlockPos(0, 2, 0);
+    private static final BlockPos MAX_15 = new BlockPos(14, 4, 14);
 
     private static DiningSpace onlyDiningSpace(Tavern tavern) {
         return tavern.getDiningManager().getSpaces().iterator().next();
@@ -44,15 +44,15 @@ public class FurnitureRecognitionTests {
         Tavern tavern = freshTavern(helper);
         // Only 2 tables: that's the level-1 limit, a third would be rejected and skew the result
         // facing the table -> valid
-        BlockPos good = placeTableWithChair(helper, new BlockPos(2, 1, 2), Direction.SOUTH);
+        BlockPos good = placeTableWithChair(helper, new BlockPos(2, 2, 2), Direction.SOUTH);
         // facing the table but a block on top -> invalid
-        BlockPos covered = placeTableWithChair(helper, new BlockPos(10, 1, 2), Direction.SOUTH);
+        BlockPos covered = placeTableWithChair(helper, new BlockPos(10, 2, 2), Direction.SOUTH);
         helper.setBlock(covered.above(), Blocks.OAK_PLANKS);
         // right next to that table but facing away from it -> invalid
-        BlockPos facingAway = new BlockPos(10, 1, 1);
+        BlockPos facingAway = new BlockPos(10, 2, 1);
         placeChair(helper, facingAway, Direction.NORTH);
         // no table at all -> invalid
-        BlockPos lonely = new BlockPos(2, 1, 10);
+        BlockPos lonely = new BlockPos(2, 2, 10);
         placeChair(helper, lonely, Direction.NORTH);
         tavern.createDiningArea("dining", helper.absolutePos(MIN), helper.absolutePos(MAX_15));
 
@@ -69,10 +69,10 @@ public class FurnitureRecognitionTests {
     public static void diningLimitsAtLevel1(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
         for (int x = 2; x <= 10; x += 4) {
-            placeTable(helper, new BlockPos(x, 1, 2));
+            placeTable(helper, new BlockPos(x, 2, 2));
         }
         for (int x = 1; x <= 9; x++) {
-            placeChair(helper, new BlockPos(x, 1, 10), Direction.NORTH);
+            placeChair(helper, new BlockPos(x, 2, 10), Direction.NORTH);
         }
         var result = (DiningSpace.ScanResult) tavern.createDiningArea("dining",
                 helper.absolutePos(MIN), helper.absolutePos(MAX_15)).getScanResult();
@@ -88,22 +88,22 @@ public class FurnitureRecognitionTests {
     @GameTest(template = FLAT_15, batch = "furniture_service_limits")
     public static void oneLecternAndOneReceptionDeskPerTavern(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        helper.setBlock(new BlockPos(2, 1, 2), Blocks.LECTERN);
-        helper.setBlock(new BlockPos(4, 1, 2), Blocks.LECTERN);
-        helper.setBlock(new BlockPos(6, 1, 2), TavernKeeperMod.RECEPTION_DESK.get());
-        helper.setBlock(new BlockPos(8, 1, 2), Blocks.BARREL);
-        helper.setBlock(new BlockPos(2, 1, 12), Blocks.LECTERN);
-        helper.setBlock(new BlockPos(4, 1, 12), TavernKeeperMod.RECEPTION_DESK.get());
+        helper.setBlock(new BlockPos(2, 2, 2), Blocks.LECTERN);
+        helper.setBlock(new BlockPos(4, 2, 2), Blocks.LECTERN);
+        helper.setBlock(new BlockPos(6, 2, 2), TavernKeeperMod.RECEPTION_DESK.get());
+        helper.setBlock(new BlockPos(8, 2, 2), Blocks.BARREL);
+        helper.setBlock(new BlockPos(2, 2, 12), Blocks.LECTERN);
+        helper.setBlock(new BlockPos(4, 2, 12), TavernKeeperMod.RECEPTION_DESK.get());
 
         var first = (ServiceSpace.ScanResult) tavern.createServiceArea("a",
-                helper.absolutePos(new BlockPos(0, 1, 0)), helper.absolutePos(new BlockPos(14, 3, 5))).getScanResult();
+                helper.absolutePos(new BlockPos(0, 2, 0)), helper.absolutePos(new BlockPos(14, 4, 5))).getScanResult();
         helper.assertValueEqual(first.getLecternsFound(), 1, "lecterns in first area");
         helper.assertValueEqual(first.getLecternsRejected(), 1, "lecterns rejected in first area");
         helper.assertValueEqual(first.getReceptionDesksFound(), 1, "desks in first area");
         helper.assertValueEqual(first.getBarrelsFound(), 1, "barrels in first area");
 
         var second = (ServiceSpace.ScanResult) tavern.createServiceArea("b",
-                helper.absolutePos(new BlockPos(0, 1, 9)), helper.absolutePos(new BlockPos(14, 3, 14))).getScanResult();
+                helper.absolutePos(new BlockPos(0, 2, 9)), helper.absolutePos(new BlockPos(14, 4, 14))).getScanResult();
         helper.assertValueEqual(second.getLecternsFound(), 0, "lecterns in second area");
         helper.assertValueEqual(second.getLecternsRejected(), 1, "lecterns rejected in second area");
         helper.assertValueEqual(second.getReceptionDesksRejected(), 1, "desks rejected in second area");
@@ -115,7 +115,7 @@ public class FurnitureRecognitionTests {
     public static void bedLimitsFollowTavernLevel(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
         for (int x = 2; x <= 10; x += 4) {
-            placeBed(helper, new BlockPos(x, 1, 4), Direction.NORTH);
+            placeBed(helper, new BlockPos(x, 2, 4), Direction.NORTH);
         }
         var atLevel1 = (SleepingSpace.ScanResult) tavern.createSleepingArea("beds",
                 helper.absolutePos(MIN), helper.absolutePos(MAX_15)).getScanResult();
@@ -136,14 +136,14 @@ public class FurnitureRecognitionTests {
     @GameTest(template = FLAT_15, batch = "furniture_upgrade_rescans")
     public static void upgradeMakesAlreadyPlacedBedsUsable(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        placeBed(helper, new BlockPos(2, 1, 4), Direction.NORTH);
-        placeBed(helper, new BlockPos(6, 1, 4), Direction.NORTH);
+        placeBed(helper, new BlockPos(2, 2, 4), Direction.NORTH);
+        placeBed(helper, new BlockPos(6, 2, 4), Direction.NORTH);
         sleepingArea(helper, tavern, MIN, MAX_15);
         helper.assertValueEqual(tavern.getSleepingManager().getTotalBedCount(), 0, "beds at level 1");
 
         upgradeTo(tavern, TavernUpgrade.LEVEL_2); // no manual rescan
         helper.assertValueEqual(tavern.getSleepingManager().getTotalBedCount(), 2, "beds right after level-up");
-        helper.assertTrue(tavern.findNearestAvailableBed(helper.absolutePos(new BlockPos(4, 1, 8)), 48).isPresent(),
+        helper.assertTrue(tavern.findNearestAvailableBed(helper.absolutePos(new BlockPos(4, 2, 8)), 48).isPresent(),
                 "Customers should be able to find the beds after level-up");
         helper.succeed();
     }
@@ -155,7 +155,7 @@ public class FurnitureRecognitionTests {
         upgradeTo(tavern, TavernUpgrade.LEVEL_2); // max 2 beds
         BlockPos[] heads = new BlockPos[3];
         for (int i = 0; i < 3; i++) {
-            heads[i] = placeBed(helper, new BlockPos(2 + 4 * i, 1, 4), Direction.NORTH);
+            heads[i] = placeBed(helper, new BlockPos(2 + 4 * i, 2, 4), Direction.NORTH);
         }
         sleepingArea(helper, tavern, MIN, MAX_15);
         SleepingSpace space = tavern.getSleepingManager().getSpaces().iterator().next();
@@ -178,8 +178,8 @@ public class FurnitureRecognitionTests {
     @GameTest(template = FLAT_7, batch = "furniture_area_height")
     public static void flatAreaIsExtendedToThreeBlocks(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        BlockPos min = helper.absolutePos(new BlockPos(0, 1, 0));
-        BlockPos max = helper.absolutePos(new BlockPos(6, 1, 6));
+        BlockPos min = helper.absolutePos(new BlockPos(0, 2, 0));
+        BlockPos max = helper.absolutePos(new BlockPos(6, 2, 6));
         TavernArea area = tavern.createDiningArea("flat", min, max).getArea();
         helper.assertValueEqual(area.getMaxPos().getY(), min.getY() + 2, "area max Y");
         helper.succeed();

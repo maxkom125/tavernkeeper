@@ -69,7 +69,7 @@ in a real structure, with real customers walking, pathfinding and ticking their 
   `/test runthis` (test you're looking at), `/test runfailed`. Note: tests reset the tavern of the world they run in.
 - **Write a test:** a `public static void` method taking `GameTestHelper`, annotated
   `@GameTest(template = FLAT_15, batch = "unique_name")` in a class with `@GameTestHolder(TavernKeeperMod.MODID)`
-  and `@PrefixGameTestTemplate(false)`. Positions are relative to the structure; the floor is `y=0`, stand at `y=1`.
+  and `@PrefixGameTestTemplate(false)`. Positions are relative to the test (`GameTestHelper`); the flat templates' floor is at `y=1`, so place furniture and spawn customers at `y=2` (a customer at `y=1` suffocates in the floor).
 - **Isolation (important):** the `Tavern` is shared by the whole level, and tests inside one batch run at the same time.
   So any test touching the tavern gets its **own batch** and starts with `TavernTestSupport.freshTavern(helper)`
   (new empty tavern, closed so no random customers spawn).

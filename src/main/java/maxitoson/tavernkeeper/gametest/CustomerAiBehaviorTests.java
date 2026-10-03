@@ -30,11 +30,11 @@ public class CustomerAiBehaviorTests {
     @GameTest(template = FLAT_15, batch = "ai_lectern", timeoutTicks = 300)
     public static void customerMovesToLecternAndWaits(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        BlockPos lectern = new BlockPos(12, 1, 7);
+        BlockPos lectern = new BlockPos(12, 2, 7);
         helper.setBlock(lectern, Blocks.LECTERN);
-        serviceArea(helper, tavern, new BlockPos(9, 1, 4), new BlockPos(14, 3, 10));
+        serviceArea(helper, tavern, new BlockPos(9, 2, 4), new BlockPos(14, 4, 10));
 
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 1, 7), LifecycleType.DINING_ONLY);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 2, 7), LifecycleType.DINING_ONLY);
         WalkTracker walk = new WalkTracker(helper, customer, CustomerState.FINDING_LECTERN, helper.absolutePos(lectern));
         helper.onEachTick(walk::tick);
 
@@ -51,10 +51,10 @@ public class CustomerAiBehaviorTests {
     @GameTest(template = FLAT_15, batch = "ai_seat", timeoutTicks = 300)
     public static void customerFindsSeatAndEats(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        BlockPos chair = placeTableWithChair(helper, new BlockPos(11, 1, 7), Direction.SOUTH);
-        diningArea(helper, tavern, new BlockPos(0, 1, 0), new BlockPos(14, 3, 14));
+        BlockPos chair = placeTableWithChair(helper, new BlockPos(11, 2, 7), Direction.SOUTH);
+        diningArea(helper, tavern, new BlockPos(0, 2, 0), new BlockPos(14, 4, 14));
 
-        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(2, 1, 7));
+        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(2, 2, 7));
 
         helper.succeedWhen(() -> {
             helper.assertTrue(customer.getCustomerState() == CustomerState.EATING,
@@ -72,11 +72,11 @@ public class CustomerAiBehaviorTests {
     @GameTest(template = FLAT_15, batch = "ai_reception", timeoutTicks = 300)
     public static void customerMovesToReceptionDeskAndLeavesAtLevel1(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        BlockPos desk = new BlockPos(12, 1, 7);
+        BlockPos desk = new BlockPos(12, 2, 7);
         helper.setBlock(desk, TavernKeeperMod.RECEPTION_DESK.get());
-        serviceArea(helper, tavern, new BlockPos(9, 1, 4), new BlockPos(14, 3, 10));
+        serviceArea(helper, tavern, new BlockPos(9, 2, 4), new BlockPos(14, 4, 10));
 
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 1, 7), LifecycleType.SLEEPING_ONLY);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 2, 7), LifecycleType.SLEEPING_ONLY);
         boolean[] reachedDesk = {false};
         helper.onEachTick(() -> {
             if (customer.getCustomerState() != CustomerState.FINDING_RECEPTION) {
@@ -96,7 +96,7 @@ public class CustomerAiBehaviorTests {
     @GameTest(template = FLAT_7, batch = "ai_no_lectern", timeoutTicks = 100)
     public static void customerWithoutLecternKeepsSearching(GameTestHelper helper) {
         freshTavern(helper);
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 1, 3), LifecycleType.DINING_ONLY);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 2, 3), LifecycleType.DINING_ONLY);
 
         helper.runAfterDelay(80, () -> {
             helper.assertTrue(customer.getCustomerState() == CustomerState.FINDING_LECTERN,

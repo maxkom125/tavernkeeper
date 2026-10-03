@@ -36,7 +36,7 @@ public class CustomerPanicTests {
                 CustomerState.LEAVING, CustomerState.LEAVING);
         helper.assertValueEqual(expected.size(), CustomerState.values().length, "every state covered");
 
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 1, 3), LifecycleType.FULL_SERVICE);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 2, 3), LifecycleType.FULL_SERVICE);
         expected.forEach((before, after) -> {
             customer.setCustomerState(before);
             customer.saveStateBeforePanic();
@@ -49,7 +49,7 @@ public class CustomerPanicTests {
     @GameTest(template = FLAT_7, batch = "panic_hurt", timeoutTicks = 100)
     public static void hurtCustomerPanicsAndRemembersWhatItWasDoing(GameTestHelper helper) {
         freshTavern(helper);
-        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(3, 1, 3));
+        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(3, 2, 3));
         customer.hurt(helper.getLevel().damageSources().generic(), 1.0F);
 
         helper.succeedWhen(() -> {

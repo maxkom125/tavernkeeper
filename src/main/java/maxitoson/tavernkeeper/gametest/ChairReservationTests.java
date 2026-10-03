@@ -22,18 +22,18 @@ import static maxitoson.tavernkeeper.gametest.TavernTestSupport.*;
 @PrefixGameTestTemplate(false)
 public class ChairReservationTests {
 
-    private static final BlockPos AREA_MIN = new BlockPos(0, 1, 0);
-    private static final BlockPos AREA_MAX = new BlockPos(14, 3, 14);
+    private static final BlockPos AREA_MIN = new BlockPos(0, 2, 0);
+    private static final BlockPos AREA_MAX = new BlockPos(14, 4, 14);
 
     @GameTest(template = FLAT_15, batch = "seat_two_customers", timeoutTicks = 400)
     public static void twoCustomersTakeDifferentChairs(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        BlockPos chairA = helper.absolutePos(placeTableWithChair(helper, new BlockPos(11, 1, 4), Direction.WEST));
-        BlockPos chairB = helper.absolutePos(placeTableWithChair(helper, new BlockPos(11, 1, 10), Direction.WEST));
+        BlockPos chairA = helper.absolutePos(placeTableWithChair(helper, new BlockPos(11, 2, 4), Direction.WEST));
+        BlockPos chairB = helper.absolutePos(placeTableWithChair(helper, new BlockPos(11, 2, 10), Direction.WEST));
         diningArea(helper, tavern, AREA_MIN, AREA_MAX);
 
-        CustomerEntity first = spawnSeatSeeker(helper, new BlockPos(2, 1, 6));
-        CustomerEntity second = spawnSeatSeeker(helper, new BlockPos(2, 1, 8));
+        CustomerEntity first = spawnSeatSeeker(helper, new BlockPos(2, 2, 6));
+        CustomerEntity second = spawnSeatSeeker(helper, new BlockPos(2, 2, 8));
 
         helper.succeedWhen(() -> {
             helper.assertTrue(first.getCustomerState() == CustomerState.EATING, "First customer not eating");
@@ -51,11 +51,11 @@ public class ChairReservationTests {
     @GameTest(template = FLAT_15, batch = "seat_one_chair_two_customers", timeoutTicks = 400)
     public static void extraCustomerWaitsWhenAllChairsTaken(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        BlockPos chair = helper.absolutePos(placeTableWithChair(helper, new BlockPos(11, 1, 7), Direction.WEST));
+        BlockPos chair = helper.absolutePos(placeTableWithChair(helper, new BlockPos(11, 2, 7), Direction.WEST));
         diningArea(helper, tavern, AREA_MIN, AREA_MAX);
 
-        CustomerEntity first = spawnSeatSeeker(helper, new BlockPos(2, 1, 5));
-        CustomerEntity second = spawnSeatSeeker(helper, new BlockPos(2, 1, 9));
+        CustomerEntity first = spawnSeatSeeker(helper, new BlockPos(2, 2, 5));
+        CustomerEntity second = spawnSeatSeeker(helper, new BlockPos(2, 2, 9));
 
         helper.onEachTick(() -> {
             if (first.isSitting() && second.isSitting()) {
@@ -81,11 +81,11 @@ public class ChairReservationTests {
     @GameTest(template = FLAT_7, batch = "seat_released_after_meal", timeoutTicks = 400)
     public static void chairIsReleasedAfterEating(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        BlockPos chair = helper.absolutePos(placeTableWithChair(helper, new BlockPos(3, 1, 3), Direction.EAST));
-        diningArea(helper, tavern, new BlockPos(0, 1, 0), new BlockPos(6, 3, 6));
+        BlockPos chair = helper.absolutePos(placeTableWithChair(helper, new BlockPos(3, 2, 3), Direction.EAST));
+        diningArea(helper, tavern, new BlockPos(0, 2, 0), new BlockPos(6, 4, 6));
         DiningManager dining = tavern.getDiningManager();
 
-        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(1, 1, 1));
+        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(1, 2, 1));
         boolean[] ate = {false};
         helper.onEachTick(() -> {
             if (customer.getCustomerState() == CustomerState.EATING) {
@@ -106,12 +106,12 @@ public class ChairReservationTests {
     @GameTest(template = FLAT_7, batch = "seat_invalid_chair", timeoutTicks = 200)
     public static void chairNotFacingTableIsNeverUsed(GameTestHelper helper) {
         Tavern tavern = freshTavern(helper);
-        placeTable(helper, new BlockPos(3, 1, 3));
-        BlockPos chair = new BlockPos(4, 1, 3);
+        placeTable(helper, new BlockPos(3, 2, 3));
+        BlockPos chair = new BlockPos(4, 2, 3);
         placeChair(helper, chair, Direction.EAST); // east side of the table, but facing away from it
-        diningArea(helper, tavern, new BlockPos(0, 1, 0), new BlockPos(6, 3, 6));
+        diningArea(helper, tavern, new BlockPos(0, 2, 0), new BlockPos(6, 4, 6));
 
-        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(1, 1, 1));
+        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(1, 2, 1));
         helper.runAtTickTime(150, () -> {
             helper.assertTrue(customer.getCustomerState() == CustomerState.FINDING_SEAT,
                     "Customer should keep looking, got: " + customer.getCustomerState());
