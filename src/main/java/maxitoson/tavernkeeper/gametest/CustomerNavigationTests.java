@@ -73,8 +73,8 @@ public class CustomerNavigationTests {
     /**
      * Common checks for "customer walks to a chair and sits":
      *  - not stuck / no big detour (WalkTracker)
-     *  - holds the chair reservation for the whole walk (regression: the move behavior used to time out
-     *    after 40 ticks and release the chair while the customer kept walking)
+     *  - never walks towards the chair without holding its reservation (regression: the move behavior
+     *    used to time out after 40 ticks and release the chair while the customer kept walking)
      *  - walked into the sit radius itself (wasn't placed onto the chair from further away)
      *  - ends up EATING, riding a seat on that exact chair
      */
@@ -86,24 +86,22 @@ public class CustomerNavigationTests {
         CustomerEntity customer = spawnSeatSeeker(helper, relSpawn);
 
         WalkTracker walk = new WalkTracker(helper, customer, CustomerState.FINDING_SEAT, chair);
-        boolean[] reserved = {false};
         helper.onEachTick(() -> {
             walk.tick();
-            boolean ownsChair = isOccupiedBy(tavern, chair, customer);
-            if (ownsChair) {
-                reserved[0] = true;
-            } else if (reserved[0] && customer.getCustomerState() == CustomerState.FINDING_SEAT) {
-                helper.fail("Chair reservation was dropped mid-walk at tick " + helper.getTick()
-                        + ", customer at " + helper.relativePos(customer.blockPosition()));
+            // A customer may drop a reservation when a walk attempt fails and re-reserve later;
+            // what must never happen is walking towards a chair it doesn't hold.
+            if (customer.getCustomerState() == CustomerState.FINDING_SEAT && chair.equals(walkTargetOf(customer))
+                    && !isOccupiedBy(tavern, chair, customer)) {
+                helper.fail("Customer walks to a chair it hasn't reserved (tick " + helper.getTick()
+                        + ", at " + helper.relativePos(customer.blockPosition()) + ")");
             }
         });
 
         helper.succeedWhen(() -> {
             helper.assertTrue(customer.getCustomerState() == CustomerState.EATING,
                     "Customer not eating yet, state: " + customer.getCustomerState());
-            helper.assertTrue(customer.isSitting(), "Customer is EATING but not sitting");
-            helper.assertTrue(chair.equals(customer.getSittingEntity().getSittingPos()),
-                    "Customer sat on " + customer.getSittingEntity().getSittingPos() + " instead of " + chair);
+            BlockPos seat = seatOf(helper, customer);
+            helper.assertTrue(chair.equals(seat), "Customer sat on " + seat + " instead of " + chair);
             helper.assertTrue(isOccupiedBy(tavern, chair, customer), "Seated customer doesn't hold the chair");
             // Same check as MoveToTargetBehavior uses to decide the target was reached
             int reach = FindSeat.REACHED_DISTANCE;

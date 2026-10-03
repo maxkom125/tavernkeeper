@@ -12,6 +12,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.StairBlock;
@@ -138,6 +139,23 @@ public final class TavernTestSupport {
         CustomerEntity customer = spawnCustomer(helper, pos, LifecycleType.DINING_ONLY);
         customer.setCustomerState(CustomerState.FINDING_SEAT);
         return customer;
+    }
+
+    /**
+     * Absolute position of the chair the customer is sitting on; fails the test (instead of throwing
+     * a NullPointerException, which would crash the test server) when it isn't sitting yet.
+     * Note: the state switches to EATING one tick before the customer actually sits down.
+     */
+    public static BlockPos seatOf(GameTestHelper helper, CustomerEntity customer) {
+        helper.assertTrue(customer.isSitting(), "Customer is not sitting (state " + customer.getCustomerState() + ")");
+        return customer.getSittingEntity().getSittingPos();
+    }
+
+    /** Block the customer's brain is currently walking to, or null when it isn't walking anywhere. */
+    public static BlockPos walkTargetOf(CustomerEntity customer) {
+        return customer.getBrain().getMemory(MemoryModuleType.WALK_TARGET)
+                .map(target -> target.getTarget().currentBlockPosition())
+                .orElse(null);
     }
 
     public static boolean isOccupiedBy(Tavern tavern, BlockPos absChairPos, CustomerEntity customer) {

@@ -103,6 +103,7 @@ public class TavernProgressionTests {
 
         tavern.deleteArea(second.getCreatedArea().getId());
         var lastDeletion = tavern.deleteArea(first.getCreatedArea().getId());
+        helper.assertTrue(lastDeletion != null, "Deleting an existing area returned no result");
         helper.assertTrue(lastDeletion.wasOwnershipLost(), "Deleting the last area should release ownership");
         helper.assertFalse(tavern.hasOwner(), "Tavern should have no owner");
 

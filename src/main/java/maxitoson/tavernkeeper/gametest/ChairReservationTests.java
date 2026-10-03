@@ -38,8 +38,8 @@ public class ChairReservationTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(first.getCustomerState() == CustomerState.EATING, "First customer not eating");
             helper.assertTrue(second.getCustomerState() == CustomerState.EATING, "Second customer not eating");
-            BlockPos seatA = first.getSittingEntity().getSittingPos();
-            BlockPos seatB = second.getSittingEntity().getSittingPos();
+            BlockPos seatA = seatOf(helper, first);
+            BlockPos seatB = seatOf(helper, second);
             helper.assertFalse(seatA.equals(seatB), "Both customers sat on the same chair " + seatA);
             helper.assertTrue((seatA.equals(chairA) && seatB.equals(chairB)) || (seatA.equals(chairB) && seatB.equals(chairA)),
                     "Customers should sit on the two chairs, got " + seatA + " and " + seatB);
