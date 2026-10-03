@@ -49,7 +49,7 @@ import java.util.stream.Stream;
  */
 public class Tavern extends SavedData implements TavernContext {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String DATA_NAME = "tavernkeeper_tavern";
+    public static final String DATA_NAME = "tavernkeeper_tavern";
     
     private final DiningManager diningManager;
     private final SleepingManager sleepingManager;
@@ -670,6 +670,8 @@ public class Tavern extends SavedData implements TavernContext {
         if (newTavernLevel != null) {
             // Apply upgrade to all managers
             applyCurrentUpgradeToAllManagers();
+            // Re-scan so furniture rejected under the old limits (e.g. beds at level 1) is picked up now
+            scanAndRecognize();
             setDirty();
         }
     }
@@ -994,20 +996,19 @@ public class Tavern extends SavedData implements TavernContext {
      */
     private void loadTavernData(HolderLookup.Provider registries) {
         if (loadedData != null && level != null) {
+            // Load statistics and upgrades FIRST: spaces re-scan their furniture on load,
+            // and the scan enforces upgrade limits (e.g. maxBeds is 0 at LEVEL_1)
+            statistics.load(loadedData);
+            upgradeManager.load(loadedData);
+            advancementManager.load(loadedData);
+            applyCurrentUpgradeToAllManagers();
+
             // Load managers
             diningManager.load(loadedData, level, registries);
             sleepingManager.load(loadedData, level, registries);
             serviceManager.load(loadedData, level, registries);
             customerManager.load(loadedData, level, registries);
-            
-            // Load statistics and upgrades
-            statistics.load(loadedData);
-            upgradeManager.load(loadedData);
-            advancementManager.load(loadedData);
-            
-            // Apply current upgrade to managers after loading
-            applyCurrentUpgradeToAllManagers();
-            
+
             // Load tavern metadata
             loadTavernMetadata();
             
