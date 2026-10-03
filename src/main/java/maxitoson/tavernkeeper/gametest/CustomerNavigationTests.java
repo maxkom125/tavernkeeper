@@ -53,8 +53,11 @@ public class CustomerNavigationTests {
                 helper.setBlock(new BlockPos(7, 2, z), Blocks.OAK_FENCE);
             }
         }
-        // (6,2,7) is the only near-side spot within the sit radius - block it
-        helper.setBlock(new BlockPos(6, 2, 7), Blocks.OAK_FENCE);
+        // (6,2,7) is the only near-side spot within the sit radius. Block it with a solid 2-high wall:
+        // a lone fence post is thin enough to stand next to inside that block, and a 1-high block
+        // would let the customer climb onto the table from the near side.
+        helper.setBlock(new BlockPos(6, 2, 7), Blocks.STONE_BRICKS);
+        helper.setBlock(new BlockPos(6, 3, 7), Blocks.STONE_BRICKS);
         runSeatingScenario(helper, tavern, chair, new BlockPos(2, 2, 7),
                 arrival -> helper.assertTrue(arrival.getX() >= 8,
                         "Customer sat down from " + arrival + ", on the near side of the table"));
@@ -95,7 +98,7 @@ public class CustomerNavigationTests {
         runSeatingScenario(helper, tavern, relChair, relSpawn, arrival -> {});
     }
 
-    /** @param arrivalCheck extra assertion on the RELATIVE position the customer last walked on before sitting */
+    /** @param arrivalCheck extra check (call helper.fail / assert) on the RELATIVE position the customer last walked on before sitting */
     private static void runSeatingScenario(GameTestHelper helper, Tavern tavern, BlockPos relChair, BlockPos relSpawn,
                                            Consumer<BlockPos> arrivalCheck) {
         diningArea(helper, tavern, new BlockPos(0, 2, 0), new BlockPos(14, 4, 14));
@@ -105,8 +108,20 @@ public class CustomerNavigationTests {
         CustomerEntity customer = spawnSeatSeeker(helper, relSpawn);
 
         WalkTracker walk = new WalkTracker(helper, customer, CustomerState.FINDING_SEAT, chair);
+        boolean[] arrivalChecked = {false};
         helper.onEachTick(() -> {
             walk.tick();
+            if (!arrivalChecked[0] && customer.getCustomerState() == CustomerState.EATING) {
+                // Checked once, right when the customer sits down, so a wrong arrival fails with its
+                // real reason instead of being masked by a later "not eating yet" timeout message
+                arrivalChecked[0] = true;
+                BlockPos arrival = helper.relativePos(walk.lastWalkingPos());
+                int reach = FindSeat.REACHED_DISTANCE;
+                if (walk.lastWalkingPos().distSqr(chair) > reach * reach) {
+                    helper.fail("Customer sat down from " + arrival + ", outside the " + reach + "-block sit radius");
+                }
+                arrivalCheck.accept(arrival);
+            }
             // A customer may drop a reservation when a walk attempt fails and re-reserve later;
             // what must never happen is walking towards a chair it doesn't hold.
             if (customer.getCustomerState() == CustomerState.FINDING_SEAT && chair.equals(walkTargetOf(customer))
@@ -122,12 +137,7 @@ public class CustomerNavigationTests {
             BlockPos seat = seatOf(helper, customer);
             helper.assertTrue(chair.equals(seat), "Customer sat on " + seat + " instead of " + chair);
             helper.assertTrue(isOccupiedBy(tavern, chair, customer), "Seated customer doesn't hold the chair");
-            // Same check as MoveToTargetBehavior uses to decide the target was reached
-            int reach = FindSeat.REACHED_DISTANCE;
-            helper.assertTrue(walk.lastWalkingPos().distSqr(chair) <= reach * reach,
-                    "Customer sat down from " + helper.relativePos(walk.lastWalkingPos())
-                    + ", outside the " + reach + "-block sit radius");
-            arrivalCheck.accept(helper.relativePos(walk.lastWalkingPos()));
+            helper.assertTrue(arrivalChecked[0], "Arrival was never checked");
         });
     }
 }
