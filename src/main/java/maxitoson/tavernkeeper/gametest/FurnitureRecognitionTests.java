@@ -162,7 +162,7 @@ public class FurnitureRecognitionTests {
         helper.assertValueEqual(space.getBedCount(), 2, "beds before break");
 
         BlockPos brokenHead = space.getBeds().get(0);
-        BlockPos rel = helper.relativePos(brokenHead);
+        BlockPos rel = toRelative(helper, brokenHead);
         BlockState oldState = helper.getLevel().getBlockState(brokenHead);
         // BreakEvent fires while the block is still there - mirror WorldUpdateHandler
         space.onBlockBroken(brokenHead, oldState);

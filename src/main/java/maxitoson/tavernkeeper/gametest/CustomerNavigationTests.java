@@ -115,7 +115,7 @@ public class CustomerNavigationTests {
                 // Checked once, right when the customer sits down, so a wrong arrival fails with its
                 // real reason instead of being masked by a later "not eating yet" timeout message
                 arrivalChecked[0] = true;
-                BlockPos arrival = helper.relativePos(walk.lastWalkingPos());
+                BlockPos arrival = toRelative(helper, walk.lastWalkingPos());
                 int reach = FindSeat.REACHED_DISTANCE;
                 if (walk.lastWalkingPos().distSqr(chair) > reach * reach) {
                     helper.fail("Customer sat down from " + arrival + ", outside the " + reach + "-block sit radius");
@@ -127,7 +127,7 @@ public class CustomerNavigationTests {
             if (customer.getCustomerState() == CustomerState.FINDING_SEAT && chair.equals(walkTargetOf(customer))
                     && !isOccupiedBy(tavern, chair, customer)) {
                 helper.fail("Customer walks to a chair it hasn't reserved (tick " + helper.getTick()
-                        + ", at " + helper.relativePos(customer.blockPosition()) + ")");
+                        + ", at " + toRelative(helper, customer.blockPosition()) + ")");
             }
         });
 

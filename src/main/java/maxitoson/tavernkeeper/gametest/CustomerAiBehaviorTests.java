@@ -43,7 +43,7 @@ public class CustomerAiBehaviorTests {
                     "Customer should reach lectern (WAITING_SERVICE), got: " + customer.getCustomerState());
             helper.assertTrue(customer.getFoodRequest() != null, "Waiting customer has no food request");
             helper.assertTrue(customer.blockPosition().closerThan(helper.absolutePos(lectern), 2.5),
-                    "Customer is waiting too far from the lectern: " + helper.relativePos(customer.blockPosition()));
+                    "Customer is waiting too far from the lectern: " + toRelative(helper, customer.blockPosition()));
         });
     }
 

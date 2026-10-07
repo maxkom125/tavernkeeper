@@ -46,6 +46,16 @@ public final class TavernTestSupport {
 
     private TavernTestSupport() {}
 
+    // ========== Coordinates ==========
+
+    /**
+     * Absolute -> test-relative position. Use this instead of {@code GameTestHelper.relativePos}:
+     * in 1.21.1 that method returns x and z negated for unrotated tests.
+     */
+    public static BlockPos toRelative(GameTestHelper helper, BlockPos abs) {
+        return abs.subtract(helper.absolutePos(BlockPos.ZERO));
+    }
+
     // ========== Tavern ==========
 
     /**
@@ -212,8 +222,8 @@ public final class TavernTestSupport {
                 }
                 Path path = customer.getNavigation().createPath(target, 1);
                 if (path == null || !path.canReach()) {
-                    helper.fail("Pathfinder found no route from " + helper.relativePos(customer.blockPosition())
-                            + " to " + helper.relativePos(target));
+                    helper.fail("Pathfinder found no route from " + toRelative(helper, customer.blockPosition())
+                            + " to " + toRelative(helper, target));
                 }
                 routeLength = length(path);
                 last = customer.position();
@@ -227,7 +237,7 @@ public final class TavernTestSupport {
             if (window.size() > STUCK_WINDOW) {
                 window.removeFirst();
                 if (horizontalDistance(window.peekFirst(), now) < STUCK_MIN_MOVE) {
-                    helper.fail("Customer stuck at " + helper.relativePos(customer.blockPosition())
+                    helper.fail("Customer stuck at " + toRelative(helper, customer.blockPosition())
                             + " for " + STUCK_WINDOW + " ticks while " + walkingState);
                 }
             }
