@@ -32,6 +32,8 @@ public class TestStructureProvider implements DataProvider {
             try {
                 // Flat stone floor used as the base for most GameTests
                 writeFlat(output, "gametest/flat_7x5x7", 7, 5, 7);
+                // Larger floor for navigation tests (room for obstacles and detours)
+                writeFlat(output, "gametest/flat_15x5x15", 15, 5, 15);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to generate test structure", e);
             }

@@ -4,125 +4,105 @@ import maxitoson.tavernkeeper.TavernKeeperMod;
 import maxitoson.tavernkeeper.entities.CustomerEntity;
 import maxitoson.tavernkeeper.entities.ai.CustomerState;
 import maxitoson.tavernkeeper.entities.ai.LifecycleType;
-import maxitoson.tavernkeeper.entities.ai.lifecycle.CustomerLifecycleFactory;
 import maxitoson.tavernkeeper.tavern.Tavern;
+import maxitoson.tavernkeeper.tavern.economy.FoodRequest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.StairBlock;
-import net.minecraft.world.level.block.state.properties.Half;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
+import static maxitoson.tavernkeeper.gametest.TavernTestSupport.*;
+
 /**
- * Behavioral AI tests — customers physically navigate to furniture and transition states.
- *
- * FURNITURE LIMITS (level 1): MAX_LECTERNS=1, MAX_RECEPTION_DESKS=1, maxBeds=0, maxTables=2, maxChairs=8.
- * All tests share one Tavern per ServerLevel and run concurrently — each furniture type must be
- * registered by EXACTLY ONE test:
- *   - customerMovesToLecternAndWaits  → owns the 1 lectern
- *   - customerFindsSeatAndEats        → owns 1 table + 1 chair
- *   - customerMovesToReceptionDesk    → owns the 1 reception desk
+ * Behavioral AI tests - customers physically navigate to furniture and transition states.
+ * Every test owns its batch and starts from {@link TavernTestSupport#freshTavern}, so furniture limits
+ * (1 lectern, 1 reception desk at level 1) never leak between tests.
+ * Spawn points are far enough away that each customer has to actually walk (reach radius is 1-2 blocks).
  */
 @GameTestHolder(TavernKeeperMod.MODID)
 @PrefixGameTestTemplate(false)
 public class CustomerAiBehaviorTests {
 
-    private static final String FLAT_PLATFORM = "gametest/flat_7x5x7";
-
-    @SuppressWarnings("unchecked")
-    private static CustomerEntity spawnCustomer(GameTestHelper helper, BlockPos pos) {
-        return helper.spawn(
-                (EntityType<CustomerEntity>) (EntityType<?>) TavernKeeperMod.CUSTOMER.get(), pos);
-    }
-
-    /**
-     * Customer navigates to a lectern and transitions to WAITING_SERVICE.
-     * Owns: the 1 allowed lectern (MAX_LECTERNS = 1 at level 1).
-     */
-    @GameTest(template = FLAT_PLATFORM, timeoutTicks = 200)
+    /** Customer walks to the lectern, then waits there with a food request. */
+    @GameTest(template = FLAT_15, batch = "ai_lectern", timeoutTicks = 300)
     public static void customerMovesToLecternAndWaits(GameTestHelper helper) {
-        helper.setBlock(new BlockPos(5, 1, 3), Blocks.LECTERN.defaultBlockState());
-        ServerLevel level = (ServerLevel) helper.getLevel();
-        Tavern tavern = Tavern.get(level);
-        tavern.createServiceArea("svc",
-                helper.absolutePos(new BlockPos(1, 1, 1)),
-                helper.absolutePos(new BlockPos(6, 4, 6)));
+        Tavern tavern = freshTavern(helper);
+        BlockPos lectern = new BlockPos(12, 2, 7);
+        helper.setBlock(lectern, Blocks.LECTERN);
+        serviceArea(helper, tavern, new BlockPos(9, 2, 4), new BlockPos(14, 4, 10));
 
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 2, 3));
-        customer.setLifecycle(CustomerLifecycleFactory.fromType(LifecycleType.DINING_ONLY));
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 2, 7), LifecycleType.DINING_ONLY);
+        WalkTracker walk = new WalkTracker(helper, customer, CustomerState.FINDING_LECTERN, helper.absolutePos(lectern));
+        helper.onEachTick(walk::tick);
 
-        helper.runAfterDelay(100, () -> {
-            helper.assertTrue(
-                    customer.getCustomerState() == CustomerState.WAITING_SERVICE,
-                    "Customer should reach lectern (WAITING_SERVICE), got: " + customer.getCustomerState()
-            );
-            helper.succeed();
+        helper.succeedWhen(() -> {
+            helper.assertTrue(customer.getCustomerState() == CustomerState.WAITING_SERVICE,
+                    "Customer should reach lectern (WAITING_SERVICE), got: " + customer.getCustomerState());
+            helper.assertTrue(customer.getFoodRequest() != null, "Waiting customer has no food request");
+            helper.assertTrue(customer.blockPosition().closerThan(helper.absolutePos(lectern), 2.5),
+                    "Customer is waiting too far from the lectern: " + toRelative(helper, customer.blockPosition()));
         });
     }
 
-    /**
-     * Customer navigates to a chair adjacent to a table and transitions to EATING.
-     * Table at (3,1,4) upside-down stair; chair at (3,1,5) FACING=SOUTH → getFacing()=NORTH toward table.
-     * Owns: 1 table + 1 chair.
-     */
-    @GameTest(template = FLAT_PLATFORM, timeoutTicks = 200)
+    /** Served customer walks to the only valid chair and starts eating. */
+    @GameTest(template = FLAT_15, batch = "ai_seat", timeoutTicks = 300)
     public static void customerFindsSeatAndEats(GameTestHelper helper) {
-        helper.setBlock(new BlockPos(3, 1, 4),
-                Blocks.OAK_STAIRS.defaultBlockState()
-                        .setValue(StairBlock.HALF, Half.TOP)
-                        .setValue(StairBlock.FACING, Direction.SOUTH));
-        helper.setBlock(new BlockPos(3, 1, 5),
-                Blocks.OAK_STAIRS.defaultBlockState()
-                        .setValue(StairBlock.HALF, Half.BOTTOM)
-                        .setValue(StairBlock.FACING, Direction.SOUTH));
+        Tavern tavern = freshTavern(helper);
+        BlockPos chair = placeTableWithChair(helper, new BlockPos(11, 2, 7), Direction.SOUTH);
+        diningArea(helper, tavern, new BlockPos(0, 2, 0), new BlockPos(14, 4, 14));
 
-        ServerLevel level = (ServerLevel) helper.getLevel();
-        Tavern tavern = Tavern.get(level);
-        tavern.createDiningArea("dining",
-                helper.absolutePos(new BlockPos(1, 1, 1)),
-                helper.absolutePos(new BlockPos(6, 4, 6)));
+        CustomerEntity customer = spawnSeatSeeker(helper, new BlockPos(2, 2, 7));
 
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 2, 3));
-        customer.setLifecycle(CustomerLifecycleFactory.fromType(LifecycleType.DINING_ONLY));
-        customer.setCustomerState(CustomerState.FINDING_SEAT);
-
-        helper.runAfterDelay(100, () -> {
-            helper.assertTrue(
-                    customer.getCustomerState() == CustomerState.EATING,
-                    "Customer should find a seat and enter EATING, got: " + customer.getCustomerState()
-            );
-            helper.succeed();
+        helper.succeedWhen(() -> {
+            helper.assertTrue(customer.getCustomerState() == CustomerState.EATING,
+                    "Customer should find a seat and enter EATING, got: " + customer.getCustomerState());
+            helper.assertTrue(customer.isSitting(), "Eating customer should be sitting");
+            helper.assertTrue(isOccupiedBy(tavern, helper.absolutePos(chair), customer),
+                    "Eating customer should hold its chair reservation");
         });
     }
 
     /**
-     * Customer navigates to a reception desk and leaves FINDING_RECEPTION.
-     * At level 1, WaitAtReceptionDesk auto-transitions to FINDING_BED (maxBeds=0, no sleeping request created).
-     * Owns: the 1 allowed reception desk (MAX_RECEPTION_DESKS = 1 at level 1).
+     * Sleeping customer walks to the reception desk. At level 1 sleeping is not offered
+     * (no sleeping request), so the customer gives up and leaves.
      */
-    @GameTest(template = FLAT_PLATFORM, timeoutTicks = 200)
-    public static void customerMovesToReceptionDesk(GameTestHelper helper) {
-        helper.setBlock(new BlockPos(5, 1, 3), TavernKeeperMod.RECEPTION_DESK.get().defaultBlockState());
-        ServerLevel level = (ServerLevel) helper.getLevel();
-        Tavern tavern = Tavern.get(level);
-        tavern.createServiceArea("svc-reception",
-                helper.absolutePos(new BlockPos(1, 1, 1)),
-                helper.absolutePos(new BlockPos(6, 4, 6)));
+    @GameTest(template = FLAT_15, batch = "ai_reception", timeoutTicks = 300)
+    public static void customerMovesToReceptionDeskAndLeavesAtLevel1(GameTestHelper helper) {
+        Tavern tavern = freshTavern(helper);
+        BlockPos desk = new BlockPos(12, 2, 7);
+        helper.setBlock(desk, TavernKeeperMod.RECEPTION_DESK.get());
+        serviceArea(helper, tavern, new BlockPos(9, 2, 4), new BlockPos(14, 4, 10));
 
-        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 2, 3));
-        customer.setLifecycle(CustomerLifecycleFactory.fromType(LifecycleType.SLEEPING_ONLY));
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(2, 2, 7), LifecycleType.SLEEPING_ONLY);
+        boolean[] reachedDesk = {false};
+        helper.onEachTick(() -> {
+            if (customer.getCustomerState() != CustomerState.FINDING_RECEPTION) {
+                reachedDesk[0] = true;
+            }
+        });
 
-        helper.runAfterDelay(100, () -> {
-            CustomerState state = customer.getCustomerState();
-            helper.assertTrue(
-                    state != CustomerState.FINDING_RECEPTION,
-                    "Customer should have reached reception desk (left FINDING_RECEPTION), got: " + state
-            );
+        helper.succeedWhen(() -> {
+            helper.assertTrue(reachedDesk[0], "Customer never left FINDING_RECEPTION");
+            helper.assertTrue(customer.getRequest() == null, "No sleeping request should exist at level 1");
+            helper.assertTrue(customer.isRemoved() || customer.getCustomerState() == CustomerState.LEAVING,
+                    "Level-1 sleeping customer should leave, got: " + customer.getCustomerState());
+        });
+    }
+
+    /** With no lectern anywhere, a dining customer keeps looking instead of inventing a target. */
+    @GameTest(template = FLAT_7, batch = "ai_no_lectern", timeoutTicks = 100)
+    public static void customerWithoutLecternKeepsSearching(GameTestHelper helper) {
+        freshTavern(helper);
+        CustomerEntity customer = spawnCustomer(helper, new BlockPos(3, 2, 3), LifecycleType.DINING_ONLY);
+
+        helper.runAfterDelay(80, () -> {
+            helper.assertTrue(customer.getCustomerState() == CustomerState.FINDING_LECTERN,
+                    "Customer should still be FINDING_LECTERN, got: " + customer.getCustomerState());
+            FoodRequest request = customer.getFoodRequest();
+            helper.assertTrue(request == null, "Customer got a food request without a lectern");
             helper.succeed();
         });
     }
